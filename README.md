@@ -69,17 +69,17 @@ To compile this plugin, you need:
 
     Example for a prebuild static linked `x86_energy` which is not in the default path:
 
-        cmake .. -DX86E_INC=~/x86_energy -DX86E_LIB=~/x86_energy/build -DX86E_STATIC=ON
+        cmake .. -DX86E_INC=$HOME/x86_energy -DX86E_LIB=$HOME/x86_energy/build -DX86E_STATIC=ON
 
     Example for building `x86_energy` lib and linking it statically:
 
-        cmake .. -DX86E_DIR=~/x86_energy
+        cmake .. -DX86E_DIR=$HOME/x86_energy
 
 3. Invoking make
 
         make
 
-4. Copy it to a location listed in `LD_LIBRARY_PATH` or add current path to `LD_LIBRARY_PATH` with
+4. Copy libx86energy_plugin.so to a location listed in `LD_LIBRARY_PATH` or add current path to `LD_LIBRARY_PATH` with
 
         export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`
 
@@ -95,7 +95,7 @@ To compile this plugin, you need:
 To add a kernel event counter to your trace, you have to specify the environment variable
 `SCOREP_METRIC_PLUGINS`, e.g.
 
-    export SCOREP_METRIC_PLUGINS="x86_energy_plugin"
+    export SCOREP_METRIC_PLUGINS="x86energy_plugin"
 
 Then you can select the software events that shall be recorded (see "Available Metrics").
 
@@ -106,7 +106,7 @@ To add a kernel event counter to your trace, you have to specify the environment
 
 ###Available Metrics
 
-`SCOREP_METRIC_X86_ENERGY_PLUGIN`/`VT_PLUGIN_CNTR_METRICS` specifies the software events that shall
+`SCOREP_METRIC_X86ENERGY_PLUGIN`/`VT_PLUGIN_CNTR_METRICS` specifies the software events that shall
 be recorded when tracing an application. You can add the following metrics:
 
 * `*_energy`
@@ -151,7 +151,7 @@ be recorded when tracing an application. You can add the following metrics:
 
 E.g.:
 
-    export SCOREP_METRIC_X86_ENERGY_PLUGIN="gpu_power"
+    export SCOREP_METRIC_X86ENERGY_PLUGIN="gpu_power"
 
 or for VampirTrace:
 
@@ -187,7 +187,7 @@ or for VampirTrace:
 
 * `SCOREP_X86ENERGY_SYNCHRONOUS`/`VT_X86ENERGY_SYNCHRONOUS` (default=false, *experimental*)
 
-    Safe event data synchronously. *Use at your own risk!*
+    Save event data synchronously. *Use at your own risk!*
 
 ###If anything fails
 
