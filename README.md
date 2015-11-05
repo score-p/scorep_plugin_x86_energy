@@ -79,7 +79,8 @@ To compile this plugin, you need:
 
         make
 
-4. Copy libx86energy_plugin.so to a location listed in `LD_LIBRARY_PATH` or add current path to `LD_LIBRARY_PATH` with
+4. Copy `libx86energy_plugin.so` to a location listed in `LD_LIBRARY_PATH` or add current path to
+    `LD_LIBRARY_PATH` with
 
         export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`
 
