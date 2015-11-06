@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(X86ENERGY_PLUGIN)
+project(x86energy_plugin)
 
 option(BACKEND_SCOREP "Build plugin using scorep(ON) or vampirtrace(OFF)" ON)
 
@@ -46,7 +46,7 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -Wstrict-prototypes -Wall -W
 set(CMAKE_C_FLAGS_RELEASE "-Os")
 
 include_directories(${X86_ENERGY_INCLUDE_DIRS})
-add_library(x86energy_plugin SHARED ${PLUGIN_SOURCE})
-target_link_libraries(x86energy_plugin ${X86_ENERGY_LIBRARIES})
+add_library(${PROJECT_NAME} SHARED ${PLUGIN_SOURCE})
+target_link_libraries(${PROJECT_NAME} ${X86_ENERGY_LIBRARIES})
 
-install(TARGETS x86energy_plugin LIBRARY DESTINATION lib)
+install(TARGETS ${PROJECT_NAME} LIBRARY DESTINATION lib)
