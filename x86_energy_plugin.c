@@ -621,7 +621,7 @@ static uint64_t get_all_values(int32_t id, timevalue_t **result)
 }
 
 #ifdef BACKEND_SCOREP
-SCOREP_METRIC_PLUGIN_ENTRY( x86_energy_plugin )
+SCOREP_METRIC_PLUGIN_ENTRY( x86energy_plugin )
 #endif
 #ifdef BACKEND_VTRACE
 vt_plugin_cntr_info get_info()
