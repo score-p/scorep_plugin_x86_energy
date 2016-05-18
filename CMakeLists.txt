@@ -3,22 +3,20 @@ project(x86energy_plugin)
 
 option(BACKEND_SCOREP "Build plugin using scorep(ON) or vampirtrace(OFF)" ON)
 
-set(SCOREP_FOUND false)
-set(X86_ENERGY_FOUND false)
-
 set(PLUGIN_SOURCE x86_energy_plugin.c)
 
+SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/common;${CMAKE_MODULE_PATH}")
 
-include(common/FindX86Energy.cmake)
-if(X86_ENERGY_FOUND)
-    include_directories(${X86E_INC})
+find_package(X86Energy REQUIRED)
+if(X86Energy_FOUND)
+    include_directories(${X86_ENERGY_INCLUDE_DIRS})
 else()
     message(SEND_ERROR "X86_Energy was not found but is required!")
 endif()
 
 
 if(BACKEND_SCOREP)
-    include(common/FindScorep.cmake)
+    find_package(Scorep)
     if(SCOREP_FOUND)
         include_directories(${SCOREP_INCLUDE_DIRS})
         add_definitions("-DBACKEND_SCOREP")
@@ -29,7 +27,7 @@ endif()
 
 
 if(NOT SCOREP_FOUND OR NOT BACKEND_SCOREP)
-    include(common/FindVampirTrace.cmake)
+    find_package(VampirTrace REQUIRED)
     if(VT_FOUND)
         include_directories(${VT_INCLUDE_DIRS})
         add_definitions("-DBACKEND_VTRACE")
@@ -45,7 +43,6 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -Wstrict-prototypes -Wall -W
 # release c flags
 set(CMAKE_C_FLAGS_RELEASE "-Os")
 
-include_directories(${X86_ENERGY_INCLUDE_DIRS})
 add_library(${PROJECT_NAME} SHARED ${PLUGIN_SOURCE})
 target_link_libraries(${PROJECT_NAME} ${X86_ENERGY_LIBRARIES})
 
