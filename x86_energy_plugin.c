@@ -58,16 +58,25 @@
 
 #ifdef BACKEND_VTRACE
 #define ENV_PREFIX "VT_"
-#define SET_METRIC_INFO(__minfo) \
+#define SET_METRIC_INFO_ACC(__minfo) \
+            __minfo.cntr_property = VT_PLUGIN_CNTR_ACC \
+                    | VT_PLUGIN_CNTR_DOUBLE | VT_PLUGIN_CNTR_LAST;
+#define SET_METRIC_INFO_ABS(__minfo) \
             __minfo.cntr_property = VT_PLUGIN_CNTR_ABS \
                     | VT_PLUGIN_CNTR_DOUBLE | VT_PLUGIN_CNTR_LAST;
 #endif
 
 #ifdef BACKEND_SCOREP
 #define ENV_PREFIX "SCOREP_"
-#define SET_METRIC_INFO(__minfo) \
+#define SET_METRIC_INFO_ACC(__minfo) \
             __minfo.description = NULL; \
             __minfo.mode        = SCOREP_METRIC_MODE_ACCUMULATED_LAST; \
+            __minfo.value_type  = SCOREP_METRIC_VALUE_DOUBLE;          \
+            __minfo.base        = SCOREP_METRIC_BASE_DECIMAL;          \
+            __minfo.exponent    = 0;
+#define SET_METRIC_INFO_ABS(__minfo) \
+            __minfo.description = NULL; \
+            __minfo.mode        = SCOREP_METRIC_MODE_ABSOLUTE_LAST; \
             __minfo.value_type  = SCOREP_METRIC_VALUE_DOUBLE;          \
             __minfo.base        = SCOREP_METRIC_BASE_DECIMAL;          \
             __minfo.exponent    = 0;
@@ -280,7 +289,7 @@ static metric_properties_t * get_event_info(char * event_name) {
                     snprintf(buffer, sizeof(buffer), "package%i_%s_power", i, source->plattform_features->name[k]);
                     return_values[j].name = strdup(buffer);
                     return_values[j].unit = strdup("Watt");
-                    SET_METRIC_INFO(return_values[j]);
+                    SET_METRIC_INFO_ABS(return_values[j]);
                     event_list[event_list_size].name=strdup(buffer);
                     event_list[event_list_size].type=POWER;
                     event_list[event_list_size].ident=source->plattform_features->ident[k];
@@ -291,7 +300,7 @@ static metric_properties_t * get_event_info(char * event_name) {
             snprintf(buffer, sizeof(buffer), "sum_%s_power", source->plattform_features->name[k]);
             return_values[j].name = strdup(buffer);
             return_values[j].unit = strdup("Watt");
-            SET_METRIC_INFO(return_values[j]);
+            SET_METRIC_INFO_ABS(return_values[j]);
             event_list[event_list_size].name=strdup(buffer);
             event_list[event_list_size].type=SYSPOWER;
             event_list[event_list_size].ident=source->plattform_features->ident[k];
@@ -317,7 +326,7 @@ static metric_properties_t * get_event_info(char * event_name) {
                     snprintf(buffer, sizeof(buffer), "package%i_%s_energy", i, source->plattform_features->name[k]);
                     return_values[j].name = strdup(buffer);
                     return_values[j].unit = strdup("Joule");
-                    SET_METRIC_INFO(return_values[j]);
+                    SET_METRIC_INFO_ACC(return_values[j]);
                     event_list[event_list_size].name=strdup(buffer);
                     event_list[event_list_size].type=ENERGY;
                     event_list[event_list_size].ident=source->plattform_features->ident[k];
@@ -328,7 +337,7 @@ static metric_properties_t * get_event_info(char * event_name) {
             snprintf(buffer, sizeof(buffer), "sum_%s_energy", source->plattform_features->name[k]);
             return_values[j].name = strdup(buffer);
             return_values[j].unit = strdup("Joule");
-            SET_METRIC_INFO(return_values[j]);
+            SET_METRIC_INFO_ACC(return_values[j]);
             event_list[event_list_size].name=strdup(buffer);
             event_list[event_list_size].type=SYSENERGY;
             event_list[event_list_size].ident=source->plattform_features->ident[k];
@@ -368,13 +377,13 @@ static metric_properties_t * get_event_info(char * event_name) {
                         snprintf(buffer, sizeof(buffer), "socket%d_%s_energy", i, feature_name);
                         return_values[i].name = strdup(buffer);
                         return_values[i].unit = strdup("Joule");
-                        SET_METRIC_INFO(return_values[i]);
+                        SET_METRIC_INFO_ACC(return_values[i]);
                     }
                     else {
                         snprintf(buffer, sizeof(buffer), "socket%d_%s_power", i, feature_name);
                         return_values[i].name = strdup(buffer);
                         return_values[i].unit = strdup("Watt");
-                        SET_METRIC_INFO(return_values[i]);
+                        SET_METRIC_INFO_ABS(return_values[i]);
                     }
 
                     event_list[event_list_size].name=strdup(buffer);
@@ -389,14 +398,14 @@ static metric_properties_t * get_event_info(char * event_name) {
                     snprintf(buffer, sizeof(buffer), "sum_%s_energy", feature_name);
                     return_values[nr_packages].name = strdup(buffer);
                     return_values[nr_packages].unit = strdup("Joule");
-                    SET_METRIC_INFO(return_values[nr_packages]);
+                    SET_METRIC_INFO_ACC(return_values[nr_packages]);
                     type = SYSENERGY;
                 }
                 else {
                     snprintf(buffer, sizeof(buffer), "sum_%s_power", feature_name);
                     return_values[nr_packages].name = strdup(buffer);
                     return_values[nr_packages].unit = strdup("Watt");
-                    SET_METRIC_INFO(return_values[nr_packages]);
+                    SET_METRIC_INFO_ABS(return_values[nr_packages]);
                     type = SYSPOWER;
                 }
 
