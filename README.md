@@ -1,12 +1,10 @@
-#Score-P power and energy event plugin counter
+# Score-P power and energy event plugin counter
 
-This is the Score-P power and energy event plugin counter for Intel Sandybridge
-and AMD Bulldozer. The plugin supports reading `msr` registers directly or through the `x86_adapt`
-library.
+This is the Score-P power and energy event plugin counter for Intel Sandy Bridge and AMD Bulldozer. The plugin supports reading `msr` registers directly or through the `x86_adapt` library.
 
-##Compilation and Installation
+## Compilation and Installation
 
-###Prerequisites
+### Prerequisites
 
 To compile this plugin, you need:
 
@@ -30,7 +28,7 @@ To compile this plugin, you need:
     The kernel module `x86_adapt_driver` should be active and and should have reading access to
     `/dev/x86_adapt/cpu/*`.
 
-###Build Options
+### Build Options
 
 * `X86E_STATIC` (default off)
 
@@ -53,7 +51,7 @@ To compile this plugin, you need:
 
     Build for Score-P (alternative: build for VampirTrace).
 
-###Building
+### Building
 
 1. Create a build directory
 
@@ -89,9 +87,9 @@ To compile this plugin, you need:
 > If `x86_energy` is linked dynamic then the location of `x86_energy` has to be in the
 > `LD_LIBRARY_PATH` as well.
 
-##Usage
+## Usage
 
-###Score-P
+### Score-P
 
 To add a kernel event counter to your trace, you have to specify the environment variable
 `SCOREP_METRIC_PLUGINS`, e.g.
@@ -100,23 +98,23 @@ To add a kernel event counter to your trace, you have to specify the environment
 
 Then you can select the software events that shall be recorded (see "Available Metrics").
 
-###VampirTrace
+### VampirTrace
 
 To add a kernel event counter to your trace, you have to specify the environment variable
 `VT_PLUGIN_CNTR_METRICS`.
 
-###Available Metrics
+### Available Metrics
 
 `SCOREP_METRIC_X86ENERGY_PLUGIN`/`VT_PLUGIN_CNTR_METRICS` specifies the software events that shall
 be recorded when tracing an application. You can add the following metrics:
 
 * `*_energy`
 
-    Collect energy consumption information for every avaible counter.
+    Collect energy consumption information for every available counter.
 
 * `*_power`
 
-    Collect power consumption information for every avabile counter.
+    Collect power consumption information for every available counter.
 
 * `package_energy`
 
@@ -158,7 +156,7 @@ or for VampirTrace:
 
     export VT_PLUGIN_CNTR_METRICS=X86ENERGY_*_energy
 
-###Environment variables
+### Environment variables
 
 * `SCOREP_X86ENERGY_INTERVAL_US`/`VT_X86ENERGY_INTERVAL_US` (default=100000)
 
@@ -180,7 +178,7 @@ or for VampirTrace:
     The size of the buffer for storing samples. Can be suffixed with G, M, and K.
 
     The buffer size is per counter per package, e.g., on a system with 3 energy counters, 2 sockets
-    and 4 MB bufer size this would be 24 MB in total.
+    and 4 MB buffer size this would be 24 MB in total.
 
     Typically, a sample consists of a 8 byte timestamp and 8 byte per selected counter. If the
     buffer is too small, it might not be capable of storing all events. If this is the case, then an
@@ -190,7 +188,7 @@ or for VampirTrace:
 
     Save event data synchronously. *Use at your own risk!*
 
-###If anything fails
+### If anything fails
 
 1. Check whether the plugin library can be loaded from the `LD_LIBRARY_PATH`.
 
@@ -198,8 +196,7 @@ or for VampirTrace:
 
 3. Write a mail to the author.
 
-##Authors
+## Authors
 
 * Joseph Schuchart (joseph.schuchart at tu-dresden dot de)
-
 * Michael Werner (michael.werner3 at tu-dresden dot de)
