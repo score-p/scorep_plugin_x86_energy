@@ -33,17 +33,21 @@
 #include <sched.h>
 #include <fcntl.h>
 #include <math.h>
-#include <sys/time.h>
+#include <sys/time.h> //Ask: Needed? Score-P?
+#include <time.h> // time measurement without scorep
 #include <errno.h>
 #include <stdint.h>
 #include <string.h>
+#include <ctype.h> //toupper
 
 #include <x86_energy.h>
 
 #define ENERGY 0
 #define POWER  1
-#define SYSENERGY 2
-#define SYSPOWER 3
+#define SUMENERGY 2
+#define SUMPOWER 3
+#define SYSENERGY 4
+#define SYSPOWER 5
 
 #define GET_OWN_VALUES 1
 #define USE_OLD_VALUES 2
@@ -82,6 +86,8 @@
             __minfo.exponent    = 0;
 #endif
 
+#define PLUGIN_PREFIX "METRIC_X86_ENERGY_PLUGIN_"
+
 #ifdef BACKEND_SCOREP
 #include <scorep/SCOREP_MetricPlugins.h>
 #endif
@@ -101,6 +107,8 @@
     typedef vt_plugin_cntr_info plugin_info_type;
 #endif
 
+// default buffer size for char buffer
+#define BUFFERSIZE 256
 
 
 /* to which cpu is the report thread pinned? (0==not pinned) */
@@ -109,6 +117,7 @@ static int pin_cpu=0;
 static struct x86_energy_source *source = NULL;
 
 static int nr_packages = -1;
+static int numberOfFeatures = -1;
 
 union value {
     double dbl;
@@ -125,9 +134,15 @@ struct event {
     union value *reg_values;
 }__attribute__((aligned(64)));
 
+struct timestamp_scorep_gettime
+{
+    uint64_t scorep;
+    double millisecs;
+};
+
 static int32_t event_list_size = 0;
 static struct event event_list[512];
-static uint64_t *timestamps;
+static struct timestamp_scorep_gettime *timestamps;
 static uint64_t sample_count = 0;
 
 /* only used when keep file handles is true length is given by nr_sockets */
@@ -145,6 +160,9 @@ static size_t buf_size = DEFAULT_BUF_SIZE; // 4MB per Event per Thread
 
 static int synchronous = 0;
 
+/* power offset for the blade */
+static double offset = 0;
+
 static size_t parse_buffer_size(const char *s)
 {
     char *tmp = NULL;
@@ -154,7 +172,8 @@ static size_t parse_buffer_size(const char *s)
     size = strtoll(s, &tmp, 10);
 
     if (size == 0) {
-        fprintf(stderr, "X86_ENERGY_PLUGIN: Failed to parse buffer size ('%s'), using default %zu\n", s, DEFAULT_BUF_SIZE);
+        fprintf(stderr, "X86_ENERGY_PLUGIN: Failed to parse buffer size ('%s'), "\
+                "using default %zu\n", s, DEFAULT_BUF_SIZE);
         return DEFAULT_BUF_SIZE;
     }
 
@@ -185,16 +204,19 @@ static int init_devices(void)
     /* init x86_energy */
     source = get_available_sources();
     if(source == NULL) {
-        fprintf(stderr,"X86_ENERGY_PLUGIN: Could not detect a suitable cpu (errno = %i: %s)\n", errno, strerror(errno));
+        fprintf(stderr,"X86_ENERGY_PLUGIN: Could not detect a suitable cpu "\
+                "(errno = %i: %s)\n", errno, strerror(errno));
         return -1;
     }
     nr_packages = source->get_nr_packages();
+    numberOfFeatures = source->plattform_features->num;
 
     for(i=0;i<nr_packages;i++) {
         int ret;
         if ((ret = source->init_device(i)) != 0)
         {
-            fprintf(stderr, "X86_ENERGY_PLUGIN: Failed to initialize device %i of %i: %i (%s)!\n", i, nr_packages, ret, strerror(errno));
+            fprintf(stderr, "X86_ENERGY_PLUGIN: Failed to initialize device "\
+                    "%i of %i: %i (%s)!\n", i, nr_packages, ret, strerror(errno));
             return -1;
         }
     }
@@ -220,153 +242,217 @@ static void set_pform_wtime_function(uint64_t(*pform_wtime)(void)) {
     wtime = pform_wtime;
 }
 
+/* change the name to uppercase and put the result in the given buffer */
+void strupr(char * name, char * buffer)
+{
+    int i;
+
+    if (strlen(name) >= BUFFERSIZE)
+        fprintf(stderr, "X86_ENERGY_PLUGIN: %s is too long for the buffer. "\
+                "Please increase char buffer size to get correct sensor names.\n");
+    
+    for(i = 0; i <= strlen(name) && i < BUFFERSIZE - 1; i++)
+    {
+        buffer[i] = toupper(name[i]);
+    }
+
+    buffer[i+1] = '\0';
+}
+
 static int32_t init(void) {
     char * env;
     /* sampling rate */
 
     printf("init()\n");
 
-    env = getenv(ENV_PREFIX"X86ENERGY_INTERVAL_US");
+    env = getenv(ENV_PREFIX PLUGIN_PREFIX "INTERVAL_US");
     if (env == NULL) {
         interval_us = 100000;
     }
     else {
         interval_us = atoi(env);
         if (interval_us == 0) {
-            fprintf(stderr,
-                    "X86_ENERGY_PLUGIN: Could not parse X86ENERGY_INTERVAL_US, using 100 ms\n");
+            fprintf(stderr, "X86_ENERGY_PLUGIN: Could not parse "\
+                    "%sINTERVAL_US, using 100 ms\n", ENV_PREFIX PLUGIN_PREFIX);
             interval_us = 100000;
         }
     }
     /* use nth cpu to read msrs */
-    env = getenv(ENV_PREFIX"X86ENERGY_CPU_PIN");
+    env = getenv(ENV_PREFIX PLUGIN_PREFIX "CPU_PIN");
     if (env != NULL) {
         pin_cpu = atoi(env);
     }
 
-    env = getenv(ENV_PREFIX"X86ENERGY_BUF_SIZE");
+    env = getenv(ENV_PREFIX PLUGIN_PREFIX "BUF_SIZE");
     if (env != NULL) {
         buf_size = parse_buffer_size(env);
           if (buf_size < 1024)
           {
-                fprintf(stderr, "X86_ENERGY_PLUGIN: Given buffer size (%zu) too small, falling back to default (%zu)\n", buf_size, DEFAULT_BUF_SIZE);
+              fprintf(stderr, "X86_ENERGY_PLUGIN: Given buffer size (%zu) "\
+                      "too small, falling back to default (%zu)\n", buf_size, \
+                      DEFAULT_BUF_SIZE);
                 buf_size = DEFAULT_BUF_SIZE;
           }
     }
 
-    env = getenv(ENV_PREFIX"X86ENERGY_SYNCHRONOUS");
+    env = getenv(ENV_PREFIX PLUGIN_PREFIX "SYNCHRONOUS");
     if (env != NULL) {
-        synchronous = (strcmp(env, "yes") == 0 || strcmp(env, "1") == 0 || strcmp(env, "true") == 0) ? 1 : 0;
+        synchronous = (strcmp(env, "yes") == 0 || strcmp(env, "1") == 0 || \
+                strcmp(env, "true") == 0) ? 1 : 0;
+    }
+
+    /* offset in mW for the blade */
+    env = getenv(ENV_PREFIX PLUGIN_PREFIX "OFFSET");
+    if (env != NULL)
+    {
+        offset = atof(env);
+        if (offset < 0)
+        {
+            fprintf(stderr, "X86_ENERGY_PLUGIN: Power offset can't be negative "\
+                    "setting value to zero\n");
+            offset = 0;
+        }
     }
 
     return 0;
 }
 
 static metric_properties_t * get_event_info(char * event_name) {
+    printf("get_event_info()\n");
     int i,j,k;
-    char buffer[256];
+    char buffer[BUFFERSIZE];
+    char feature_name[BUFFERSIZE];
 
     if (source == NULL) {
         if (init_devices() != 0){
-            metric_properties_t * return_values = calloc(1, sizeof(metric_properties_t));
+            metric_properties_t * return_values = calloc(1, 
+                    sizeof(metric_properties_t));
             return return_values;
         }
     }
 
-    if (strcmp(event_name, "*") == 0 || strcmp(event_name, "*_power") == 0) {
-        int numberOfFeatures = source->plattform_features->num;
-        int numberOfMetrics = 2 + ((nr_packages+1)*numberOfFeatures); // NULL,syspower + ((nr_packages+sum_counter) * #features)
+    if (strcmp(event_name, "*/P") == 0) {
+        // NULL,syspower + ((nr_packages+sum_counter) * #features)
+        int numberOfMetrics = 2 + ((nr_packages+1)*numberOfFeatures);
         j = 0;
         metric_properties_t * return_values;
         return_values = malloc(numberOfMetrics * sizeof(metric_properties_t));
         if (return_values == NULL) {
-            fprintf(stderr, "X86_ENERGY_PLUGIN: Unable to allocate space for counter information\n");
+            fprintf(stderr, "X86_ENERGY_PLUGIN: Unable to allocate space for "\
+                    "counter information\n");
             return NULL;
         }
 
         for (k=0;k<numberOfFeatures;k++) {
+            strupr(source->plattform_features->name[k], feature_name);
             for (i=0;i<nr_packages;i++) {
-                    snprintf(buffer, sizeof(buffer), "package%i_%s_power", i, source->plattform_features->name[k]);
+                    snprintf(buffer, sizeof(buffer), "%s%i/P", feature_name, i);
                     return_values[j].name = strdup(buffer);
-                    return_values[j].unit = strdup("Watt");
+                    return_values[j].unit = strdup("mW");
                     SET_METRIC_INFO_ABS(return_values[j]);
                     event_list[event_list_size].name=strdup(buffer);
                     event_list[event_list_size].type=POWER;
-                    event_list[event_list_size].ident=source->plattform_features->ident[k];
+                    event_list[event_list_size].ident=
+                        source->plattform_features->ident[k];
                     event_list[event_list_size].package_nr=i;
                     event_list_size++;
                     j++;
             }
-            snprintf(buffer, sizeof(buffer), "sum_%s_power", source->plattform_features->name[k]);
+            snprintf(buffer, sizeof(buffer), "%s_SUM/P", feature_name);
             return_values[j].name = strdup(buffer);
             return_values[j].unit = strdup("Watt");
             SET_METRIC_INFO_ABS(return_values[j]);
             event_list[event_list_size].name=strdup(buffer);
-            event_list[event_list_size].type=SYSPOWER;
+            event_list[event_list_size].type=SUMPOWER;
             event_list[event_list_size].ident=source->plattform_features->ident[k];
             event_list_size++;
             j++;
         }
+        snprintf(buffer, sizeof(buffer), "%s/P", "BLADE");
+        return_values[j].name = strdup(buffer);
+        return_values[j].unit = strdup("mW");
+        SET_METRIC_INFO_ABS(return_values[j]);
+        event_list[event_list_size].name=strdup(buffer);
+        event_list[event_list_size].type=SYSPOWER;
+        event_list[event_list_size].ident=-1;
+        event_list_size++;
+        j++;
+
         return_values[j].name = NULL;
         return return_values;
     }
-    else if (strcmp(event_name, "*_energy") == 0) {
-        int numberOfFeatures = source->plattform_features->num;
-        int numberOfMetrics = 2 + ((nr_packages+1)*numberOfFeatures); // NULL,sysenergy + ((nr_packages+sum_counter) * #features)
+    else if (strcmp(event_name, "*") == 0 || strcmp(event_name, "*/E") == 0) {
+        // NULL,sysenergy + ((nr_packages+sum_counter) * #features)
+        int numberOfMetrics = 2 + ((nr_packages+1)*numberOfFeatures);
         j = 0;
         metric_properties_t * return_values;
         return_values = malloc(numberOfMetrics * sizeof(metric_properties_t));
         if (return_values == NULL) {
-            fprintf(stderr, "X86_ENERGY_PLUGIN: Unable to allocate space for counter information\n");
+            fprintf(stderr, "X86_ENERGY_PLUGIN: Unable to allocate space for "\
+                    "counter information\n");
             return NULL;
         }
 
         for (k=0;k<numberOfFeatures;k++) {
+            strupr(source->plattform_features->name[k], feature_name);
             for (i=0;i<nr_packages;i++) {
-                    snprintf(buffer, sizeof(buffer), "package%i_%s_energy", i, source->plattform_features->name[k]);
+                    snprintf(buffer, sizeof(buffer), "%s%i/E", feature_name, i);
                     return_values[j].name = strdup(buffer);
-                    return_values[j].unit = strdup("Joule");
+                    return_values[j].unit = strdup("mJ");
                     SET_METRIC_INFO_ACC(return_values[j]);
                     event_list[event_list_size].name=strdup(buffer);
                     event_list[event_list_size].type=ENERGY;
-                    event_list[event_list_size].ident=source->plattform_features->ident[k];
+                    event_list[event_list_size].ident=
+                        source->plattform_features->ident[k];
                     event_list[event_list_size].package_nr=i;
                     event_list_size++;
                     j++;
             }
-            snprintf(buffer, sizeof(buffer), "sum_%s_energy", source->plattform_features->name[k]);
+            snprintf(buffer, sizeof(buffer), "%s_SUM/E", feature_name);
             return_values[j].name = strdup(buffer);
-            return_values[j].unit = strdup("Joule");
+            return_values[j].unit = strdup("mJ");
             SET_METRIC_INFO_ACC(return_values[j]);
             event_list[event_list_size].name=strdup(buffer);
-            event_list[event_list_size].type=SYSENERGY;
+            event_list[event_list_size].type=SUMENERGY;
             event_list[event_list_size].ident=source->plattform_features->ident[k];
             event_list_size++;
             j++;
         }
+        snprintf(buffer, sizeof(buffer), "%s/E", "BLADE");
+        return_values[j].name = strdup(buffer);
+        return_values[j].unit = strdup("mJ");
+        SET_METRIC_INFO_ABS(return_values[j]);
+        event_list[event_list_size].name=strdup(buffer);
+        event_list[event_list_size].type=SYSENERGY;
+        event_list[event_list_size].ident=-1;
+        event_list_size++;
+        j++;
+
         return_values[j].name = NULL;
         return return_values;
     }
     /* plattform specific features */
     else {
-        int numberOfFeatures = source->plattform_features->num;
         for (j=0;j<numberOfFeatures;j++) {
-            char * feature_name = source->plattform_features->name[j];
+            strupr(source->plattform_features->name[j], feature_name);
             int feature_name_len = strlen(feature_name);
-            /* find the matching feature and make sure the event name syntax is correct (<feature>_[power|energy]) */
+            /* find the matching feature and make sure the event name 
+             * syntax is correct (<FEATURE>/[E|P]) */
             if(strncmp(event_name, feature_name, feature_name_len) == 0 &&
-               ( strcmp(&event_name[feature_name_len], "_power") == 0 || strcmp(&event_name[feature_name_len], "_energy") == 0) ) {
+                ( strcmp(&event_name[feature_name_len], "/P") == 0 || \
+                  strcmp(&event_name[feature_name_len], "/E") == 0) ) {
                 int type;
                 metric_properties_t * return_values;
                 return_values = malloc((nr_packages + 2) * sizeof(metric_properties_t));
                 if (return_values == NULL) {
-                    fprintf(stderr, "X86_ENERGY_PLUGIN: Unable to allocate space for counter information\n");
+                    fprintf(stderr, "X86_ENERGY_PLUGIN: Unable to allocate space "\
+                            "for counter information\n");
                     return NULL;
                 }
 
                 /* check if it is an energy counter
                  * otherwise assume it is a power counter */
-                if (strstr(event_name, "energy"))
+                if (strstr(event_name, "/E"))
                     type = ENERGY;
                 else
                     type = POWER;
@@ -374,13 +460,13 @@ static metric_properties_t * get_event_info(char * event_name) {
                 /* counter for every package */
                 for (i = 0; i < nr_packages; i++) {
                     if (type == ENERGY) {
-                        snprintf(buffer, sizeof(buffer), "socket%d_%s_energy", i, feature_name);
+                        snprintf(buffer, sizeof(buffer), "%s%d/E", feature_name, i);
                         return_values[i].name = strdup(buffer);
                         return_values[i].unit = strdup("Joule");
                         SET_METRIC_INFO_ACC(return_values[i]);
                     }
                     else {
-                        snprintf(buffer, sizeof(buffer), "socket%d_%s_power", i, feature_name);
+                        snprintf(buffer, sizeof(buffer), "%s%d/P", feature_name, i);
                         return_values[i].name = strdup(buffer);
                         return_values[i].unit = strdup("Watt");
                         SET_METRIC_INFO_ABS(return_values[i]);
@@ -388,30 +474,32 @@ static metric_properties_t * get_event_info(char * event_name) {
 
                     event_list[event_list_size].name=strdup(buffer);
                     event_list[event_list_size].type=type;
-                    event_list[event_list_size].ident=source->plattform_features->ident[j];
+                    event_list[event_list_size].ident=
+                        source->plattform_features->ident[j];
                     event_list[event_list_size].package_nr=i;
                     event_list_size++;
                 }
 
                 /* sum of all package counter */
                 if (type == ENERGY) {
-                    snprintf(buffer, sizeof(buffer), "sum_%s_energy", feature_name);
+                    snprintf(buffer, sizeof(buffer), "%s_SUM/E", feature_name);
                     return_values[nr_packages].name = strdup(buffer);
                     return_values[nr_packages].unit = strdup("Joule");
                     SET_METRIC_INFO_ACC(return_values[nr_packages]);
-                    type = SYSENERGY;
+                    type = SUMENERGY;
                 }
                 else {
-                    snprintf(buffer, sizeof(buffer), "sum_%s_power", feature_name);
+                    snprintf(buffer, sizeof(buffer), "%s_SUM/P", feature_name);
                     return_values[nr_packages].name = strdup(buffer);
                     return_values[nr_packages].unit = strdup("Watt");
                     SET_METRIC_INFO_ABS(return_values[nr_packages]);
-                    type = SYSPOWER;
+                    type = SUMPOWER;
                 }
 
                 event_list[event_list_size].name=strdup(buffer);
                 event_list[event_list_size].type=type;
-                event_list[event_list_size].ident=source->plattform_features->ident[j];
+                event_list[event_list_size].ident=
+                    source->plattform_features->ident[j];
                 event_list_size++;
                 /* if the description is null it should be considered the end */
                 /* Last element empty */
@@ -427,6 +515,7 @@ static metric_properties_t * get_event_info(char * event_name) {
 
 static void * thread_report(void * ignore) {
     uint64_t timestamp, timestamp2;
+    struct timespec timespec, timespec2;
     int i;
     uint64_t num_entries = buf_size / sizeof(union value);
 
@@ -443,27 +532,40 @@ static void * thread_report(void * ignore) {
         if (wtime == NULL)
             return NULL;
         if (sample_count >= num_entries) {
-            fprintf(stderr, "X86_ENERGY_PLUGIN: buffer size of %zu is to small.\n", buf_size);
-            fprintf(stderr, "X86_ENERGY_PLUGIN: Increase the buffer size with the environment variable %sX86ENERGY_BUF_SIZE\n",ENV_PREFIX);
+            fprintf(stderr, "X86_ENERGY_PLUGIN: buffer size of %zu is to small.\n", 
+                    buf_size);
+            fprintf(stderr, "X86_ENERGY_PLUGIN: Increase the buffer size with the "\
+                    "environment variable %sSIZE\n",ENV_PREFIX PLUGIN_PREFIX);
             fprintf(stderr, "X86_ENERGY_PLUGIN: Stopping sample thread\n");
             return NULL;
         }
 
-         /* get time */
+        /* get time, correct Score-P time is more important */
+        clock_gettime(CLOCK_MONOTONIC, &timespec);
         timestamp = wtime();
-         /* measure */
+        /* measure */
         for (i = 0; i < event_list_size; i++) {
             if (event_list[i].enabled) {
                 if(event_list[i].type==ENERGY)
-                    event_list[i].reg_values[sample_count].dbl = source->get_energy(event_list[i].package_nr, event_list[i].ident);
+                    event_list[i].reg_values[sample_count].dbl = 
+                        source->get_energy(event_list[i].package_nr, 
+                                event_list[i].ident);
                 else if (event_list[i].type==POWER)
-                    event_list[i].reg_values[sample_count].dbl = source->get_power(event_list[i].package_nr, event_list[i].ident);
+                    event_list[i].reg_values[sample_count].dbl = 
+                        source->get_power(event_list[i].package_nr, 
+                                event_list[i].ident);
             }
         }
         /* get time */
         timestamp2 = wtime();
+        clock_gettime(CLOCK_MONOTONIC, &timespec2);
         /* avg */
-        timestamps[sample_count] = timestamp + ((timestamp2 - timestamp) >> 1);
+        timestamps[sample_count].scorep = timestamp + 
+            ((timestamp2 - timestamp) >> 1);
+
+        timestamps[sample_count].millisecs = timespec.tv_sec*1E3 + \
+            timespec.tv_nsec/1E6 + ((timespec2.tv_sec - timespec.tv_sec)*1E3 + \
+                    (timespec2.tv_nsec - timespec.tv_nsec)/1E6)/2.0;
 
         sample_count++;
         usleep(interval_us);
@@ -503,17 +605,21 @@ static int32_t add_counter(char * event_name) {
     }
 
     if(!is_thread_created && !synchronous) {
-        fprintf(stderr, "X86_ENERGY_PLUGIN: using buffer with %zu entries per feature\n", num_entries);
+        fprintf(stderr, "X86_ENERGY_PLUGIN: using buffer with %zu entries per "\
+                "feature\n", num_entries);
         /* allocate space for time values */
-        timestamps = malloc(num_entries * sizeof(uint64_t));
+        timestamps = malloc(num_entries * sizeof(struct timestamp_scorep_gettime));
         if (timestamps == NULL)
         {
-            fprintf(stderr, "X86_ENERGY_PLUGIN: Failed to allocate memory for timestamps (%zu B)\n", num_entries * sizeof(uint64_t));
+            fprintf(stderr, "X86_ENERGY_PLUGIN: Failed to allocate memory for "\
+                    "timestamps (%zu B)\n", num_entries * 
+                    sizeof(struct timestamp_scorep_gettime));
             return -1;
         }
         if (pthread_create(&thread, NULL, &thread_report, NULL) != 0)
         {
-            fprintf(stderr, "X86_ENERGY_PLUGIN: Failed to create measurement thread!\n");
+            fprintf(stderr, "X86_ENERGY_PLUGIN: Failed to create measurement "\
+                    "thread!\n");
             return -1;
         }
 
@@ -531,7 +637,9 @@ static int32_t add_counter(char * event_name) {
                     event_list[i].reg_values = malloc(num_entries * sizeof(union value));
                     if (event_list[i].reg_values == NULL)
                     {
-                        fprintf(stderr, "X86_ENERGY_PLUGIN: Failed to allocate memory for reg_values (%zu B)\n", num_entries * sizeof(union value));
+                        fprintf(stderr, "X86_ENERGY_PLUGIN: Failed to allocate "\
+                                "memory for reg_values (%zu B)\n", 
+                                num_entries * sizeof(union value));
                         return -1;
                     }
                 } else {
@@ -570,14 +678,18 @@ get_value(int32_t counterIndex)
     union value val;
     if (event_list[counterIndex].enabled) {
         if(event_list[counterIndex].type==ENERGY) {
-            val.dbl = source->get_energy(event_list[counterIndex].package_nr, event_list[counterIndex].ident);
+            val.dbl = source->get_energy(event_list[counterIndex].package_nr, 
+                    event_list[counterIndex].ident);
         } else if (event_list[counterIndex].type==POWER) {
-            val.dbl = source->get_power(event_list[counterIndex].package_nr, event_list[counterIndex].ident);
+            val.dbl = source->get_power(event_list[counterIndex].package_nr, 
+                    event_list[counterIndex].ident);
         } else {
             val.dbl = 0.0;
         }
         //*value = val.uint64;
         //return true;
+        /* convert to mJ/mW */
+        val.dbl *= 1000;
         return val.uint64;
     }
     //return false;
@@ -589,7 +701,10 @@ static uint64_t get_all_values(int32_t id, timevalue_t **result)
 {
     uint64_t i;
     int32_t j;
+    int sumtype = -1;
+    int blade = -1;
     timevalue_t *res;
+    union value first_result, sample_result;
 
     if (counter_enabled)
     {
@@ -599,30 +714,90 @@ static uint64_t get_all_values(int32_t id, timevalue_t **result)
 
     res = (timevalue_t*) calloc(sample_count, sizeof(timevalue_t));
 
-    for (i = 0; i < sample_count; i++) {
-        /* create the sum */
-    int sumtype = -1;
-        if (event_list[id].type == SYSENERGY)
+    /* distinguish between the different sum forms */
+    switch (event_list[id].type)
+    {
+        /* sum for one sensor over all packages */
+        case SUMENERGY:
             sumtype = ENERGY;
-        else if (event_list[id].type == SYSPOWER)
-            sumtype = POWER;
+            break;
 
-        if (sumtype != -1) {
+        case SUMPOWER:
+            sumtype = POWER;
+            break;
+
+        /* sum over all sensors on all packages */
+        case SYSENERGY:
+            sumtype = ENERGY;
+            blade = 1;
+            break;
+
+        case SYSPOWER:
+            sumtype = POWER;
+            blade = 1;
+            break;
+    }
+
+    for (i = 0; i < sample_count; i++)
+    {
+        /* create the sum if the sumtype was set previously */
+        if (sumtype != -1)
+        {
             union value sum;
             sum.dbl = 0;
-            for (j=0;j<event_list_size;j++) {
-                if (event_list[j].type == sumtype &&
-                    event_list[j].ident == event_list[id].ident)
+            for (j=0;j<event_list_size;j++)
+            {
+                /* only do further work if the sumtype matches */
+                if (event_list[j].type == sumtype)
                 {
-                    sum.dbl += event_list[j].reg_values[i].dbl;
+                    /* sum for one sensor over all packages */
+                    if (blade == -1 && 
+                            event_list[j].ident == event_list[id].ident)
+                    {
+                        sum.dbl += event_list[j].reg_values[i].dbl;
+                    }
+                    /* sum for the blade */
+                    /* don't include CORE in sum because PACKAGE contains CORE */
+                    else if (blade == 1 && 
+                            strstr(event_list[j].name, "CORE") == NULL)
+                    {
+                        sum.dbl += event_list[j].reg_values[i].dbl;
+                    }
                 }
             }
-            res[i].value = sum.uint64;
+
+            /* add the offset for the BLADE */
+            if (blade == 1 && sumtype == ENERGY)
+            {
+                /* convertation to J is needed for rapl */
+                sum.dbl += offset/1000.0 * (timestamps[i].millisecs - \
+                        timestamps[0].millisecs)/1000.0;
+            }
+            else if (blade == 1 && sumtype == POWER)
+            {
+                /* this value has to be in W because of rapl */
+                sum.dbl += offset/1000.0;
+            }
+
+            sample_result.uint64 = sum.uint64;
         }
         else {
-            res[i].value = event_list[id].reg_values[i].uint64;
+            sample_result.uint64 = event_list[id].reg_values[i].uint64;
         }
-        res[i].timestamp = timestamps[i];
+
+        if (i == 0)
+            /* save first result for rescaling */
+            first_result.dbl = sample_result.dbl;
+
+        /* rescale with first result and convert to mJ/mW
+         * first result is the zero value */
+        sample_result.dbl = (sample_result.dbl - first_result.dbl)*1000;
+
+        /* ugly work because scorep transforms the uint64_t
+         * internally to double */
+        res[i].value = sample_result.uint64;
+
+        res[i].timestamp = timestamps[i].scorep;
     }
     *result = res;
 
@@ -639,9 +814,10 @@ vt_plugin_cntr_info get_info()
     plugin_info_type info;
     memset(&info, 0, sizeof(plugin_info_type));
 
-    const char *env = getenv(ENV_PREFIX"X86ENERGY_SYNCHRONOUS");
+    const char *env = getenv(ENV_PREFIX PLUGIN_PREFIX "SYNCHRONOUS");
     if (env != NULL) {
-        synchronous = (strcmp(env, "yes") == 0 || strcmp(env, "1") == 0 || strcmp(env, "true") == 0) ? 1 : 0;
+        synchronous = (strcmp(env, "yes") == 0 || strcmp(env, "1") == 0 || \
+                strcmp(env, "true") == 0) ? 1 : 0;
     }
 
 

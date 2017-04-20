@@ -8,11 +8,7 @@ set(PLUGIN_SOURCE x86_energy_plugin.c)
 SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/common;${CMAKE_MODULE_PATH}")
 
 find_package(X86Energy REQUIRED)
-if(X86Energy_FOUND)
-    include_directories(${X86_ENERGY_INCLUDE_DIRS})
-else()
-    message(SEND_ERROR "X86_Energy was not found but is required!")
-endif()
+include_directories(${X86_ENERGY_INCLUDE_DIRS})
 
 
 if(BACKEND_SCOREP)
@@ -44,6 +40,6 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -Wstrict-prototypes -Wall -W
 set(CMAKE_C_FLAGS_RELEASE "-Os")
 
 add_library(${PROJECT_NAME} SHARED ${PLUGIN_SOURCE})
-target_link_libraries(${PROJECT_NAME} ${X86_ENERGY_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${X86_ENERGY_LIBRARIES} x86_adapt)
 
 install(TARGETS ${PROJECT_NAME} LIBRARY DESTINATION lib)
