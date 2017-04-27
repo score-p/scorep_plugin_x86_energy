@@ -1,3 +1,9 @@
 [submodule "common"]
 	path = common
 	url = https://github.com/score-p/scorep_plugin_common.git
+[submodule "scorep"]
+	path = scorep
+	url = https://github.com/score-p/scorep_plugin_cxx_wrapper
+[submodule "x86_energy"]
+	path = x86_energy
+	url = https://github.com/tud-zih-energy/x86_energy
