@@ -86,7 +86,9 @@
             __minfo.exponent    = 0;
 #endif
 
-#define PLUGIN_PREFIX "METRIC_X86_ENERGY_PLUGIN_"
+#define PLUGIN_NAME "X86_ENERGY_PLUGIN"
+
+#define PLUGIN_PREFIX "METRIC_" PLUGIN_NAME "_"
 
 #ifdef BACKEND_SCOREP
 #include <scorep/SCOREP_MetricPlugins.h>
@@ -172,7 +174,7 @@ static size_t parse_buffer_size(const char *s)
     size = strtoll(s, &tmp, 10);
 
     if (size == 0) {
-        fprintf(stderr, "X86_ENERGY_PLUGIN: Failed to parse buffer size ('%s'), "\
+        fprintf(stderr, PLUGIN_NAME ": Failed to parse buffer size ('%s'), "\
                 "using default %zu\n", s, DEFAULT_BUF_SIZE);
         return DEFAULT_BUF_SIZE;
     }
@@ -204,7 +206,7 @@ static int init_devices(void)
     /* init x86_energy */
     source = get_available_sources();
     if(source == NULL) {
-        fprintf(stderr,"X86_ENERGY_PLUGIN: Could not detect a suitable cpu "\
+        fprintf(stderr, PLUGIN_NAME ": Could not detect a suitable cpu "\
                 "(errno = %i: %s)\n", errno, strerror(errno));
         return -1;
     }
@@ -215,7 +217,7 @@ static int init_devices(void)
         int ret;
         if ((ret = source->init_device(i)) != 0)
         {
-            fprintf(stderr, "X86_ENERGY_PLUGIN: Failed to initialize device "\
+            fprintf(stderr, PLUGIN_NAME ": Failed to initialize device "\
                     "%i of %i: %i (%s)!\n", i, nr_packages, ret, strerror(errno));
             return -1;
         }
@@ -248,7 +250,7 @@ void strupr(char * name, char * buffer)
     int i;
 
     if (strlen(name) >= BUFFERSIZE)
-        fprintf(stderr, "X86_ENERGY_PLUGIN: %s is too long for the buffer. "\
+        fprintf(stderr, PLUGIN_NAME ": %s is too long for the buffer. "\
                 "Please increase char buffer size to get correct sensor names.\n");
     
     for(i = 0; i <= strlen(name) && i < BUFFERSIZE - 1; i++)
@@ -265,15 +267,15 @@ static int32_t init(void) {
 
     printf("init()\n");
 
-    env = getenv(ENV_PREFIX PLUGIN_PREFIX "INTERVAL_US");
+    env = getenv(ENV_PREFIX PLUGIN_PREFIX "READING_TIME");
     if (env == NULL) {
         interval_us = 100000;
     }
     else {
         interval_us = atoi(env);
         if (interval_us == 0) {
-            fprintf(stderr, "X86_ENERGY_PLUGIN: Could not parse "\
-                    "%sINTERVAL_US, using 100 ms\n", ENV_PREFIX PLUGIN_PREFIX);
+            fprintf(stderr, PLUGIN_NAME ": Could not parse "\
+                    "%sREADING_TIME, using 100 ms\n", ENV_PREFIX PLUGIN_PREFIX);
             interval_us = 100000;
         }
     }
@@ -288,7 +290,7 @@ static int32_t init(void) {
         buf_size = parse_buffer_size(env);
           if (buf_size < 1024)
           {
-              fprintf(stderr, "X86_ENERGY_PLUGIN: Given buffer size (%zu) "\
+              fprintf(stderr, PLUGIN_NAME ": Given buffer size (%zu) "\
                       "too small, falling back to default (%zu)\n", buf_size, \
                       DEFAULT_BUF_SIZE);
                 buf_size = DEFAULT_BUF_SIZE;
@@ -308,7 +310,7 @@ static int32_t init(void) {
         offset = atof(env);
         if (offset < 0)
         {
-            fprintf(stderr, "X86_ENERGY_PLUGIN: Power offset can't be negative "\
+            fprintf(stderr, PLUGIN_NAME ": Power offset can't be negative "\
                     "setting value to zero\n");
             offset = 0;
         }
@@ -338,7 +340,7 @@ static metric_properties_t * get_event_info(char * event_name) {
         metric_properties_t * return_values;
         return_values = malloc(numberOfMetrics * sizeof(metric_properties_t));
         if (return_values == NULL) {
-            fprintf(stderr, "X86_ENERGY_PLUGIN: Unable to allocate space for "\
+            fprintf(stderr, PLUGIN_NAME ": Unable to allocate space for "\
                     "counter information\n");
             return NULL;
         }
@@ -388,7 +390,7 @@ static metric_properties_t * get_event_info(char * event_name) {
         metric_properties_t * return_values;
         return_values = malloc(numberOfMetrics * sizeof(metric_properties_t));
         if (return_values == NULL) {
-            fprintf(stderr, "X86_ENERGY_PLUGIN: Unable to allocate space for "\
+            fprintf(stderr, PLUGIN_NAME ": Unable to allocate space for "\
                     "counter information\n");
             return NULL;
         }
@@ -445,7 +447,7 @@ static metric_properties_t * get_event_info(char * event_name) {
                 metric_properties_t * return_values;
                 return_values = malloc((nr_packages + 2) * sizeof(metric_properties_t));
                 if (return_values == NULL) {
-                    fprintf(stderr, "X86_ENERGY_PLUGIN: Unable to allocate space "\
+                    fprintf(stderr, PLUGIN_NAME ": Unable to allocate space "\
                             "for counter information\n");
                     return NULL;
                 }
@@ -509,7 +511,7 @@ static metric_properties_t * get_event_info(char * event_name) {
         }
     }
 
-    fprintf(stderr, "X86_ENERGY_PLUGIN: Unknown Event %s\n", event_name);
+    fprintf(stderr, PLUGIN_NAME ": Unknown Event %s\n", event_name);
     return NULL;
 }
 
@@ -532,11 +534,11 @@ static void * thread_report(void * ignore) {
         if (wtime == NULL)
             return NULL;
         if (sample_count >= num_entries) {
-            fprintf(stderr, "X86_ENERGY_PLUGIN: buffer size of %zu is to small.\n", 
+            fprintf(stderr, PLUGIN_NAME ": buffer size of %zu is to small.\n", 
                     buf_size);
-            fprintf(stderr, "X86_ENERGY_PLUGIN: Increase the buffer size with the "\
+            fprintf(stderr, PLUGIN_NAME ": Increase the buffer size with the "\
                     "environment variable %sSIZE\n",ENV_PREFIX PLUGIN_PREFIX);
-            fprintf(stderr, "X86_ENERGY_PLUGIN: Stopping sample thread\n");
+            fprintf(stderr, PLUGIN_NAME ": Stopping sample thread\n");
             return NULL;
         }
 
@@ -605,20 +607,20 @@ static int32_t add_counter(char * event_name) {
     }
 
     if(!is_thread_created && !synchronous) {
-        fprintf(stderr, "X86_ENERGY_PLUGIN: using buffer with %zu entries per "\
+        fprintf(stderr, PLUGIN_NAME ": using buffer with %zu entries per "\
                 "feature\n", num_entries);
         /* allocate space for time values */
         timestamps = malloc(num_entries * sizeof(struct timestamp_scorep_gettime));
         if (timestamps == NULL)
         {
-            fprintf(stderr, "X86_ENERGY_PLUGIN: Failed to allocate memory for "\
+            fprintf(stderr, PLUGIN_NAME ": Failed to allocate memory for "\
                     "timestamps (%zu B)\n", num_entries * 
                     sizeof(struct timestamp_scorep_gettime));
             return -1;
         }
         if (pthread_create(&thread, NULL, &thread_report, NULL) != 0)
         {
-            fprintf(stderr, "X86_ENERGY_PLUGIN: Failed to create measurement "\
+            fprintf(stderr, PLUGIN_NAME ": Failed to create measurement "\
                     "thread!\n");
             return -1;
         }
@@ -637,7 +639,7 @@ static int32_t add_counter(char * event_name) {
                     event_list[i].reg_values = malloc(num_entries * sizeof(union value));
                     if (event_list[i].reg_values == NULL)
                     {
-                        fprintf(stderr, "X86_ENERGY_PLUGIN: Failed to allocate "\
+                        fprintf(stderr, PLUGIN_NAME ": Failed to allocate "\
                                 "memory for reg_values (%zu B)\n", 
                                 num_entries * sizeof(union value));
                         return -1;
@@ -769,7 +771,7 @@ static uint64_t get_all_values(int32_t id, timevalue_t **result)
             /* add the offset for the BLADE */
             if (blade == 1 && sumtype == ENERGY)
             {
-                /* convertation to J is needed for rapl */
+                /* converting to J is needed for rapl */
                 sum.dbl += offset/1000.0 * (timestamps[i].millisecs - \
                         timestamps[0].millisecs)/1000.0;
             }
@@ -804,8 +806,9 @@ static uint64_t get_all_values(int32_t id, timevalue_t **result)
     return sample_count;
 }
 
+// Plugin name
 #ifdef BACKEND_SCOREP
-SCOREP_METRIC_PLUGIN_ENTRY( x86energy_plugin )
+SCOREP_METRIC_PLUGIN_ENTRY( x86_energy_plugin )
 #endif
 #ifdef BACKEND_VTRACE
 vt_plugin_cntr_info get_info()
