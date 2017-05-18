@@ -4,9 +4,9 @@ This is the Score-P power and energy event plugin counter for Intel Sandy Bridge
 AMD Bulldozer. The plugin supports reading `msr` registers directly or through the 
 `x86_adapt` library.
 For the original synchronous C version with Vampir Trace support please look
-at a11bbb12b5f3ee26fad8979420b5f31100620f38.
+at Commit [a11bbb1](https://github.com/score-p/scorep_plugin_x86_energy/commit/a11bbb1).
 For a C version with an interface like the HDEEM plugin and Vampir Trace support at
-0238bba7a98a62cd6e482a8c4c53e665ef70c67b. For the documentation of this
+Commit [0238bba](https://github.com/score-p/scorep_plugin_x86_energy/commit/0238bba). For the documentation of this
 plugin version you should consider this ReadMe instead.
 
 ## Compilation and Installation
@@ -51,9 +51,7 @@ To compile this plugin, you need:
 
     Path to the `scorep-config` tool including the file name
 
-    > *Note:*
-
-    > If you have `scorep-config` in your `PATH`, it should be found by CMake.
+    > Note: If you have `scorep-config` in your `PATH`, it should be found by CMake.
 
 * `CMAKE_INSTALL_PREFIX`
 
@@ -90,11 +88,10 @@ To compile this plugin, you need:
 
         make install
 
-> *Note:*
-
-> Make sure to add the subfolder `lib` to your `LD_LIBRARY_PATH` or if you
+> Note: Make sure to add the subfolder `lib` to your `LD_LIBRARY_PATH` or if you
 > didn't use make install that the plugin is in a location listed in 
 > `LD_LIBRARY_PATH`. For example add the build directory to `LD_LIBRARY_PATH`:
+
 >       export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PWD
 
 > If `x86_energy` is linked dynamic then the location of `x86_energy` has to be in the
@@ -116,21 +113,21 @@ You have to add the list of the metric channel you are interested in to the envi
 variable `SCOREP_METIC_X86_ENERGY_PLUGIN` or `SCOREP_METRIC_X86_ENERGY_SYNC_PLUGIN`.
 
 Note: Score-P does not support per-host post-mortem plugins with profiling. If you want to
-use the post-mortem (x86_energy_plugin) plugin, you should enable tracing and disable profiling by using:
+use the post-mortem (`x86_energy_plugin`) plugin, you should enable tracing and disable profiling by using:
 
-export SCOREP_ENABLE_PROFILING="false"
-export SCOREP_ENABLE_TRACING="true"
-The sync plugin (x86_energy_sync_plugin) works with profiling and tracing.
+   export SCOREP_ENABLE_PROFILING="false"
+   export SCOREP_ENABLE_TRACING="true"
 
-Note: The plugin is implemented as a strictly synchronous plugin. Therefore, it measures per
-thread. As x86_energy can just be used nodewide, the plugin does some thread and if enabled MPI
-operations in order to obtain the responsible thread and process. The trace file might hold some
-traces that are reported as 0. The profile might report wrong profiling statistics. Moreover, the
-plugin reports mJ as interfer values. This operations are necessary to be compatible with PTF
-(http://periscope.in.tum.de/)
+The sync plugin (`x86_energy_sync_plugin`) works with profiling and tracing.
 
-Note: The interface for this plugin is built like the correspondending hdeem
-plugin.
+> Note: The plugin is implemented as a strictly synchronous plugin. Therefore, it measures per
+> thread. As x86_energy can just be used nodewide, the plugin does some thread and if enabled MPI
+> operations in order to obtain the responsible thread and process. The trace file might hold some
+> traces that are reported as 0. The profile might report wrong profiling statistics. Moreover, the
+> plugin reports mJ as interfer values. This operations are necessary to be compatible with PTF
+> (http://periscope.in.tum.de/)
+ 
+> The interface for this plugin is built like the correspondending hdeem plugin.
 
 ### Available Metrics
 
