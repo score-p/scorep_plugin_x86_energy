@@ -85,30 +85,15 @@ class x86_energy_sync_metric
         double last     = 0;
 
         /* getter functions */
-        std::string name()
-        {
-            return mname;
-        }
+        std::string name() { return mname; }
 
-        std::string full_name()
-        {
-            return mfull_name;
-        }
+        std::string full_name() { return mfull_name; }
 
-        int sensor()
-        {
-            return msensor;
-        }
+        int sensor() { return msensor; }
 
-        int node()
-        {
-            return mnode;
-        }
+        int node() { return mnode; }
 
-        std::string quantity()
-        {
-            return mquantity;
-        }
+        std::string quantity() { return mquantity; }
 
         /* functions for measure time handling */
         void set_timepoint()
@@ -346,7 +331,7 @@ public:
         }
         else
         {
-            /* if solves two problems: 
+            /* it solves two problems: 
              *  1. the first energy offset can't be really measured because 
              *      the time difference is between the construction of 
              *      x86_energy_sync_metric and now (std::chrono::time_point 
