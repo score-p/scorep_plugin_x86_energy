@@ -136,44 +136,59 @@ The sync plugin (`x86_energy_sync_plugin`) works with profiling and tracing.
 be recorded when tracing an application. You can add the following metrics:
 
 * `*/E`
+    or old syntax: `*_energy`
 
     Collect energy consumption information for every available counter.
 
 * `*/P`
+    or old syntax: `*_power`
 
     Collect power consumption information for every available counter.
 
 * `PACKAGE/E`
+    or old syntax: `package_energy`
 
     Collect power consumption information for every package.
 
 * `PACKAGE/P`
+    or old syntax: `package_power`
 
     Collect power consumption information for every package.
 
 * `CORE/E`
+    or old syntax: `core_energy`
 
     Collect power consumption information for every core.
 
 * `CORE/P`
+    or old syntax: `core_power`
 
     Collect power consumption information for every core.
 
 * `GPU/E`
+    or old syntax: `gpu_energy`
 
     Collect power consumption information for every gpu.
 
 * `GPU/P`
+    or old syntax: `gpu_power`
 
     Collect power consumption information for every gpu.
 
 * `DRAM/E`
+    or old syntax: `dram_energy`
 
     Collect power consumption information for every dram.
 
 * `DRAM/P`
+   or old syntax: `dram_power`
 
     Collect power consumption information for every dram.
+
+* `PACKAGE0/E`, etc.
+
+    Collect power consumption information for package on node 0.
+    This also works with every other metric.
 
 E.g.:
 
@@ -200,9 +215,10 @@ E.g.:
     because there are included in package.
     The default value of 70000.0 mW was measured on Taurus
 
-* `SCOREP_X86_ENERGY_PLUGIN_READING_TIME` (default=5)
+* `SCOREP_X86_ENERGY_PLUGIN_READING_TIME` (default `5`)
+   or like the old plugin: `SCOREP_X86_ENERGY_PLUGIN_INTERVALL_US`
 
-    The time in usecs, between two consecutive reads of the power/energy values. A longer interval
+    The time in millisecs, between two consecutive reads of the power/energy values. A longer interval
     means less disturbance, a shorter interval is more exact.
 
     On Intel CPUs, the registers are updated roughly every msec. If you choose an interval of 1ms

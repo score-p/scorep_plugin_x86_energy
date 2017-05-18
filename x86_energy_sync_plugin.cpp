@@ -543,10 +543,9 @@ public:
         	metric_name.erase(pos_quantity);
         }
 
-
-        scorep::plugin::util::matcher match(metric_name);
-        /* can't use nr_packages and features because start_x86_energy 
-         * is called later */
+        
+        /* also match metric name core for core0 and core1 */
+        scorep::plugin::util::matcher match(metric_name + "*");
         for (int i = 0; i < source->get_nr_packages(); i ++)
         {
             for (int j = 0; j < source->plattform_features->num; j++)
