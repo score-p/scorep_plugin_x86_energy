@@ -6,7 +6,7 @@ file(GLOB SUBMODULE_FILES "common/*")
 list(LENGTH SUBMODULE_FILES COUNT_COMMON)
 file(GLOB SUBMODULE_FILES "x86_energy/*")
 list(LENGTH SUBMODULE_FILES COUNT_X86_ENERGY)
-file(GLOB SUBMODULE_FILES "scorep/*")
+file(GLOB SUBMODULE_FILES "scorep_cxx_wrapper/*")
 list(LENGTH SUBMODULE_FILES COUNT_SCOREP)
 if(${COUNT_COMMON} EQUAL 0 OR ${COUNT_SCOREP} EQUAL 0 OR ${COUNT_X86_ENERGY} EQUAL 0 )
     message(STATUS "Initializing git submodule")
@@ -20,10 +20,8 @@ include(common/DefaultBuildType.cmake)
 
 find_package(X86Energy REQUIRED)
 include_directories(${X86_ENERGY_INCLUDE_DIRS})
-find_package(X86Adapt REQUIRED)
-include_directories(${X86_ADAPT_INCLUDE_DIRS})
 find_package(Scorep REQUIRED)
-include(scorep/ScorepCXXPlugin.cmake)
+include(scorep_cxx_wrapper/ScorepCXXPlugin.cmake)
 
 
 find_package(MPI)
@@ -53,8 +51,8 @@ elseif(ENABLE_MPI)
     message(FATAL_ERROR "Can't find MPI. Please provide MPI or unset \"ENABLE_MPI\"")
 endif()
 
-target_link_libraries(x86_energy_sync_plugin ${X86_ENERGY_LIBRARIES} ${X86_ADAPT_LIBRARIES})
-target_link_libraries(x86_energy_plugin ${X86_ENERGY_LIBRARIES} ${X86_ADAPT_LIBRARIES})
+target_link_libraries(x86_energy_sync_plugin ${X86_ENERGY_LIBRARIES})
+target_link_libraries(x86_energy_plugin ${X86_ENERGY_LIBRARIES})
 
 link_directories(${HOME}/src)
 

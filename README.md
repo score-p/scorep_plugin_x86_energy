@@ -23,15 +23,17 @@ To compile this plugin, you need:
 
 * Score-P Version 2+ (`SCOREP_METRIC_PLUGIN_VERSION` >= 1 (for C++ version)
 
-* Reading `msr` directly:
+* For the use of x86_energy:
 
-    The kernel module `msr` should be active (you might use `modprobe`) and you should have reading
-    access to `/dev/cpu/*/msr`.
+   Reading `msr` directly:
 
-* Reading energy values through `x86_adapt` (see [here](https://github.com/tud-zih-energy/x86_adapt)):
+      The kernel module `msr` should be active (you might use `modprobe`) and you should have reading
+      access to `/dev/cpu/*/msr`.
 
-    The kernel module `x86_adapt_driver` should be active and and should have reading access to
-    `/dev/x86_adapt/cpu/*`.
+   Reading energy values through `x86_adapt` (see [here](https://github.com/tud-zih-energy/x86_adapt)):
+
+      The kernel module `x86_adapt_driver` should be active and and should have reading access to
+      `/dev/x86_adapt/cpu/*`.
 
 ### Build Options
 
@@ -39,13 +41,14 @@ To compile this plugin, you need:
 
     Links `x86_energy` lib static.
 
-* `X86_ENERGY_INCLUDE_DIRS`
+* `X86_ENERGY_INCLUDE_DIRS` (usually will be found automatically)
 
     Path to `x86_energy` header files.
 
-* `X86_ENERGY_LIBRARIES`
+* `X86_ENERGY_LIBRARIES` (usually will be found automatically)
 
-    Path to `x86_energy` library.
+    Should point to the `x86_energy` library (shared or static), including
+    the path
 
 * `SCOREP_CONFIG`
 
