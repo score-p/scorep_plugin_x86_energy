@@ -113,7 +113,7 @@ To add the synchronous metric, add `x86_energy_sync_plugin` to the environment v
 events, e.g. enter / leave of regions.
 
 You have to add the list of the metric channel you are interested in to the environment
-variable `SCOREP_METIC_X86_ENERGY_PLUGIN` or `SCOREP_METRIC_X86_ENERGY_SYNC_PLUGIN`.
+variable `SCOREP_METRIC_X86_ENERGY_PLUGIN` or `SCOREP_METRIC_X86_ENERGY_SYNC_PLUGIN`.
 
 Note: Score-P does not support per-host post-mortem plugins with profiling. If you want to
 use the post-mortem (`x86_energy_plugin`) plugin, you should enable tracing and disable profiling by using:
