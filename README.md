@@ -74,14 +74,14 @@ To compile this plugin, you need:
 
 2. Invoking CMake
 
-    Specify the `x86_energy` directory if it is not in the default path with `-DX86E_INC=<PATH>`.
-    Default is to link dynamic. To link static turn `-DX86E_STATIC=ON`.
+    Specify the `x86_energy` directory if it is not in the default path with `-DX86_ENERGY_INCLUDE_DIRS=<PATH>`.
+    Default is to link dynamic. To link static turn `-DX86Energy_STATIC=ON`.
 
         cmake ..
 
     Example for a prebuild static linked `x86_energy` which is not in the default path:
 
-        cmake .. -DX86E_INC=$HOME/x86_energy -DX86E_LIB=$HOME/x86_energy/build -DX86E_STATIC=ON
+        cmake .. -DX86_ENERGY_INCLUDE_DIRS=$HOME/x86_energy -DX86_ENERGY_LIBRARIES=$HOME/x86_energy/build -DX86Energy_STATIC=ON
 
 3. Invoking make
 

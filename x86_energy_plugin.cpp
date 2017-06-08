@@ -330,11 +330,13 @@ public:
 
         std::string env_var("INTERVAL_US");
         int def_value = 5;
+        /* try old environment first */
         if (scorep::environment_variable::get(env_var) != "")
         {
             logging::warn() << "using old Environment variable " << env_var
                             << "please use READING_TIME instead";
         }
+        /* otherwise use current environment variable */
         else
         {
             env_var = "READING_TIME";
@@ -486,7 +488,7 @@ public:
                 else if (handle.quantity() == "P")
                 {
                     /* and for power the offset has to be simply added */
-                    value = offset;
+                    value = offset/1000;
                 }
 
                 for (auto point : readings)
