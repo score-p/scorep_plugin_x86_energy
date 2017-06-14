@@ -75,7 +75,7 @@ To compile this plugin, you need:
 2. Invoking CMake
 
     Specify the `x86_energy` directory if it is not in the default path with `-DX86_ENERGY_INCLUDE_DIRS=<PATH>`.
-    Default is to link dynamic. To link static turn `-DX86Energy_STATIC=ON`.
+    Default is to link static. To link static turn `-DX86Energy_STATIC=OFF`.
 
         cmake ..
 
@@ -90,6 +90,15 @@ To compile this plugin, you need:
 4. Install the files (optional)
 
         make install
+
+> Note: If x86_energy can't be found it will be build. But before this
+> plugin is build x86_energy will be installed so set an CMAKE_INSTALL_PREFIX 
+> like 
+
+>       cmake -DCMAKE_INSTALL_PREFIX=$PWD/local ..
+
+> or have write permissions to the default INSTALL_PREFIX, mostly /usr/local
+
 
 > Note: Make sure to add the subfolder `lib` to your `LD_LIBRARY_PATH` or if you
 > didn't use make install that the plugin is in a location listed in 
