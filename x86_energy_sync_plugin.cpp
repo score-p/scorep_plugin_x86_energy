@@ -34,6 +34,7 @@
 #include <iostream>
 #include <unistd.h>
 #include <chrono>
+#include <system_error>
 
 #ifdef HAVE_MPI
 #include <functional>
@@ -216,6 +217,13 @@ public:
 
         /* needed to find sensor_name */ 
         source.reset(get_available_sources());
+        /* test if the the given source is valid */
+        if (source == NULL)
+        {
+            logging::error() << "x86_energy source is not available -> Throw system_error";
+            std::error_code ec (EFAULT, std::system_category());
+            throw std::system_error(ec, "x86_energy is not usable");
+        }
 
         logging::info() << "x86_energy_init successful";
 
@@ -546,6 +554,9 @@ public:
         
         /* also match metric name core for core0 and core1 */
         scorep::plugin::util::matcher match(metric_name + "*");
+        logging::debug() << "before segfault";
+        logging::debug() << source->get_nr_packages();
+        logging::debug() << "after segfault";
         for (int i = 0; i < source->get_nr_packages(); i ++)
         {
             for (int j = 0; j < source->plattform_features->num; j++)

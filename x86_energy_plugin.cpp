@@ -37,6 +37,8 @@
 #include <unistd.h>
 #include <iostream>
 #include <chrono>
+#include <system_error>
+
 /* libs for the thread */
 #include <thread>
 #include <mutex>
@@ -173,6 +175,13 @@ class x86_energy_measurement
             /* setting correct pointer for x86_energy */
             /* source.reset(get_available_sources_nothread()); */
             source.reset(get_available_sources());
+            /* test if the the given source is valid */
+            if (source == NULL)
+            {
+                logging::error() << "x86_energy source is not available -> Throw system_error";
+                std::error_code ec (EFAULT, std::system_category());
+                throw std::system_error(ec, "x86_energy is not usable");
+            }
 
             /* get system specific numbers */
             mnr_packages = source->get_nr_packages();

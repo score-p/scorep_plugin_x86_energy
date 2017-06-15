@@ -79,9 +79,25 @@ To compile this plugin, you need:
 
         cmake ..
 
+     > Note: If x86_energy can't be found it will be build automatically with 
+     > static linked msr. But before this plugin is build x86_energy will be 
+     > installed so set an CMAKE_INSTALL_PREFIX like 
+
+     >       cmake -DCMAKE_INSTALL_PREFIX=$PWD/local ..
+
+     > or have write permissions to the default INSTALL_PREFIX, mostly /usr/local
+
     Example for a prebuild static linked `x86_energy` which is not in the default path:
 
         cmake .. -DX86_ENERGY_INCLUDE_DIRS=$HOME/x86_energy -DX86_ENERGY_LIBRARIES=$HOME/x86_energy/build -DX86Energy_STATIC=ON
+
+    If x86_energy is automatically build because it isn't in the path the
+    same Build Options can be used like for a native build of x86_energy (see [here](https://github.com/tud-zih-energy/x86_adapt)).
+
+    Example for build x86_energy with x86_adapt support and x86_adapt in
+    the LD_LIBRARY_PATH:
+
+         cmake -DCMAKE_INSTALL_PREFIX=$PWD/local -DX86_ADAPT=On ..
 
 3. Invoking make
 
@@ -90,15 +106,6 @@ To compile this plugin, you need:
 4. Install the files (optional)
 
         make install
-
-> Note: If x86_energy can't be found it will be build. But before this
-> plugin is build x86_energy will be installed so set an CMAKE_INSTALL_PREFIX 
-> like 
-
->       cmake -DCMAKE_INSTALL_PREFIX=$PWD/local ..
-
-> or have write permissions to the default INSTALL_PREFIX, mostly /usr/local
-
 
 > Note: Make sure to add the subfolder `lib` to your `LD_LIBRARY_PATH` or if you
 > didn't use make install that the plugin is in a location listed in 
@@ -127,8 +134,8 @@ variable `SCOREP_METRIC_X86_ENERGY_PLUGIN` or `SCOREP_METRIC_X86_ENERGY_SYNC_PLU
 Note: Score-P does not support per-host post-mortem plugins with profiling. If you want to
 use the post-mortem (`x86_energy_plugin`) plugin, you should enable tracing and disable profiling by using:
 
-   export SCOREP_ENABLE_PROFILING="false"
-   export SCOREP_ENABLE_TRACING="true"
+      export SCOREP_ENABLE_PROFILING="false"
+      export SCOREP_ENABLE_TRACING="true"
 
 The sync plugin (`x86_energy_sync_plugin`) works with profiling and tracing.
 
