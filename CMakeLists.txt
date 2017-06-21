@@ -14,21 +14,22 @@ if (${COUNT_COMMON} EQUAL 0 OR ${COUNT_SCOREP} EQUAL 0 OR ${COUNT_X86_ENERGY} EQ
     execute_process(COMMAND "git" "submodule" "update" WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
 endif ()
 
-SET(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/common;${CMAKE_MODULE_PATH}")
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/common;${CMAKE_MODULE_PATH}")
 
 include(common/DefaultBuildType.cmake)
 
+# suppress warning: Manually-specified variables were not used by the project
+# for the flags of x86_energy
+set(ignoreMe "${X86_ADAPT}${X86A_STATIC}${X86A_DIR}${X86A_INC}${X86A_LIB}${MSR_STATIC}${MSR_DIR}${MSR_INC}${MSR_LIB}")
 
-#find_package(X86Energy REQUIRED)
 find_package(X86Energy QUIET)
-message(STATUS "X86_ENERGY_INCLUDE_DIRS: ${X86_ENERGY_INCLUDE_DIRS}")
-message(STATUS "X86_ENERGY_LIBRARIES: ${X86_ENERGY_LIBRARIES}")
 if (NOT X86_ENERGY_INCLUDE_DIRS OR NOT X86_ENERGY_LIBRARIES)
     # build our own x86_energy with generic options
     message(STATUS "Building x86_energy")
     # add_subdirectory didn't worked bu ExternalProject, great
     include(ExternalProject)
     # but for ExternalProject the command line parameters have to be cpatured
+    # adapted from https://stackoverflow.com/q/25533831
     get_cmake_property(CACHE_VARS CACHE_VARIABLES)
     foreach(CACHE_VAR ${CACHE_VARS})
         get_property(CACHE_VAR_HELPSTRING CACHE ${CACHE_VAR} PROPERTY HELPSTRING)
