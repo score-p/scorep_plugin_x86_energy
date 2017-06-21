@@ -65,6 +65,12 @@ To compile this plugin, you need:
     Enables MPI communication for the sync plugin, and allows to run more than one MPI process
     per node.
 
+* `Build Options of x86_energy` (see [here](https://github.com/tud-zih-energy/x86_adapt))
+    All Build Options of x86_energy can be used, if x86_energy is automatically built, 
+    because it can't be found.  This Options will passed through to the x86_energy CMake
+    and ignored for this plugin.
+
+
 ### Building
 
 1. Create a build directory
@@ -91,13 +97,10 @@ To compile this plugin, you need:
 
         cmake .. -DX86_ENERGY_INCLUDE_DIRS=$HOME/x86_energy -DX86_ENERGY_LIBRARIES=$HOME/x86_energy/build -DX86Energy_STATIC=ON
 
-    If x86_energy is automatically build because it isn't in the path the
-    same Build Options can be used like for a native build of x86_energy (see [here](https://github.com/tud-zih-energy/x86_adapt)).
-
-    Example for build x86_energy with x86_adapt support and x86_adapt in
+    Example for build x86_energy with x86_adapt support and x86_adapt not in
     the LD_LIBRARY_PATH:
 
-         cmake -DCMAKE_INSTALL_PREFIX=$PWD/local -DX86_ADAPT=On ..
+         cmake -DCMAKE_INSTALL_PREFIX=$PWD/local -DX86_ADAPT=On -DX86A_DIR=/usr/local/ ..
 
 3. Invoking make
 
