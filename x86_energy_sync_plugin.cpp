@@ -156,7 +156,7 @@ private:
     int nr_packages = -1;
     /* because struct x86_energy_source is from a C library and can't be freed 
      * it has to be realeased before the destructor is called*/
-    std::unique_ptr<struct x86_energy_source> source;
+    struct x86_energy_source *source;
     int features = 0;
 
     /* minimal time beetween to sensor readings to get a value unequal zero */
@@ -216,9 +216,9 @@ public:
             << reading_time.count() << "ms";
 
         /* needed to find sensor_name */ 
-        source.reset(get_available_sources());
+        source = get_available_sources();
         /* test if the the given source is valid */
-        if (source == NULL)
+        if (source == nullptr)
         {
             logging::error() << "x86_energy source is not available -> Throw system_error";
             std::error_code ec (EFAULT, std::system_category());
@@ -255,7 +255,7 @@ public:
                     source->fini_device(i);
 
                 /* pointer is obtained from rapl and can't be freed */
-                source.release();
+                source = nullptr;
             }
             catch (std::exception& e)
             {
