@@ -173,10 +173,10 @@ class x86_energy_measurement
             : mreading_time(std::chrono::milliseconds(5)), is_thread(0)
         {
             /* setting correct pointer for x86_energy */
-            /* source.reset(get_available_sources_nothread()); */
-            source.reset(get_available_sources());
+            /* source = get_available_sources_nothread(); */
+            source = get_available_sources();
             /* test if the the given source is valid */
-            if (source == NULL)
+            if (source == nullptr)
             {
                 logging::error() << "x86_energy source is not available -> Throw system_error";
                 std::error_code ec (EFAULT, std::system_category());
@@ -194,7 +194,7 @@ class x86_energy_measurement
         ~x86_energy_measurement()
         {
             /* pointer is obtained from rapl and can't be freed */
-            source.release();
+            source = nullptr;
         }
 
         const auto& get_readings() const { return readings; }
@@ -268,7 +268,7 @@ class x86_energy_measurement
         /* x86_energy stuff */
         int mnr_packages;
         int mfeatures;
-        std::unique_ptr<struct x86_energy_source> source;
+        struct x86_energy_source* source;
         std::map<std::string, std::vector<double>> readings;
 
         /* thread stuff */
