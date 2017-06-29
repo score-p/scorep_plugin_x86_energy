@@ -25,16 +25,15 @@
  * THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define ENV_CONFIG_PREFIX "SCOREP_METRIC_X86_ENERGY_PLUGIN_"
 #include <scorep/plugin/plugin.hpp>
 #include <scorep/plugin/util/matcher.hpp>
 
 #include <ctime>
+#include <climits>
 
 #include <string>
 #include <vector>
 #include <map>
-#include <unistd.h>
 #include <iostream>
 #include <chrono>
 #include <system_error>
@@ -47,7 +46,7 @@
 #include <ratio>
 
 extern "C" {
-#include <climits>
+#include <unistd.h>
 #include <x86_energy.h>
 }
 
@@ -65,43 +64,43 @@ static double chrono_to_millis(T duration)
     return std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(duration).count();
 }
 
-template <typename TP>
-class scorep_time_converter
-{
-    using local_duration_t = typename TP::duration;
+/* template <typename TP> */
+/* class scorep_time_converter */
+/* { */
+/*     using local_duration_t = typename TP::duration; */
 
-public:
-    scorep_time_converter(TP local_start, TP local_stop, scorep::chrono::ticks scorep_start,
-                          scorep::chrono::ticks scorep_stop)
-    : local_start_(local_start), scorep_start_(scorep_start)
-    {
-        const auto local_duration = local_stop - local_start;
-        const auto scorep_duration = scorep_stop - scorep_start;
-        tick_rate_ = static_cast<double>(scorep_duration.count()) / local_duration.count();
-    }
+/* public: */
+/*     scorep_time_converter(TP local_start, TP local_stop, scorep::chrono::ticks scorep_start, */
+/*                           scorep::chrono::ticks scorep_stop) */
+/*     : local_start_(local_start), scorep_start_(scorep_start) */
+/*     { */
+/*         const auto local_duration = local_stop - local_start; */
+/*         const auto scorep_duration = scorep_stop - scorep_start; */
+/*         tick_rate_ = static_cast<double>(scorep_duration.count()) / local_duration.count(); */
+/*     } */
 
-    template <typename T>
-    scorep::chrono::ticks to_ticks(const T duration) const
-    {
-        return to_ticks(std::chrono::duration_cast<local_duration_t>(duration));
-    }
+/*     template <typename T> */
+/*     scorep::chrono::ticks to_ticks(const T duration) const */
+/*     { */
+/*         return to_ticks(std::chrono::duration_cast<local_duration_t>(duration)); */
+/*     } */
 
-    scorep::chrono::ticks to_ticks(const local_duration_t duration) const
-    {
-        return scorep::chrono::ticks(duration.count() * tick_rate_);
-    }
+/*     scorep::chrono::ticks to_ticks(const local_duration_t duration) const */
+/*     { */
+/*         return scorep::chrono::ticks(duration.count() * tick_rate_); */
+/*     } */
 
-    scorep::chrono::ticks to_ticks(const TP tp) const
-    {
-        const auto tp_offset = tp - local_start_;
-        return scorep_start_ + to_ticks(tp_offset);
-    }
+/*     scorep::chrono::ticks to_ticks(const TP tp) const */
+/*     { */
+/*         const auto tp_offset = tp - local_start_; */
+/*         return scorep_start_ + to_ticks(tp_offset); */
+/*     } */
 
-private:
-    TP local_start_;
-    scorep::chrono::ticks scorep_start_;
-    double tick_rate_;
-};
+/* private: */
+/*     TP local_start_; */
+/*     scorep::chrono::ticks scorep_start_; */
+/*     double tick_rate_; */
+/* }; */
 
 /**
  * Our x86_energy metric handle
@@ -122,18 +121,18 @@ class x86_energy_metric
         // needs move and default constructor though!
         x86_energy_metric(x86_energy_metric&&) = default;
         x86_energy_metric(const x86_energy_metric&) = delete;
-        x86_energy_metric& operator=(const x86_energy_metric&) = delete;
+        x86_energy_metric& operator=(const x86_energy_metric&) = default;
 
         /* getter functions */
-        const std::string name() const { return mname; }
+        std::string name() const { return mname; } // return by copy 
 
-        const std::string full_name() const { return mfull_name; }
+        std::string full_name() const { return mfull_name; }
 
-        const int sensor() const { return msensor; }
+        int sensor() const { return msensor; }
 
-        const int node() const { return mnode; }
+        int node() const { return mnode; }
 
-        const std::string quantity() const { return mquantity; }
+        std::string quantity() const { return mquantity; }
 
     private:
 
@@ -144,9 +143,6 @@ class x86_energy_metric
         /* on wich cpu is the sensor */
         int mnode;
         std::string mquantity;
-
-        friend std::ostream& operator<<(std::ostream& s, 
-                const x86_energy_metric& metric);
 };
 
 /**
@@ -155,8 +151,8 @@ class x86_energy_metric
  **/
 std::ostream& operator<<(std::ostream& s, const x86_energy_metric& metric)
 {
-    s << "(" << metric.mfull_name << ", " << metric.msensor << " on " 
-        << metric.mnode << ")";
+    s << "(" << metric.full_name() << ", " << metric.sensor() << " on " 
+        << metric.node() << ")";
     return s;
 }
 
@@ -191,29 +187,23 @@ class x86_energy_measurement
 
         }
 
-        ~x86_energy_measurement()
-        {
-            /* pointer is obtained from rapl and can't be freed */
-            source = nullptr;
-        }
-
         const auto& get_readings() const { return readings; }
 
-        const int features() const { return mfeatures; }
+        int features() const { return mfeatures; }
 
-        const int nr_packages() const { return mnr_packages; }
+        int nr_packages() const { return mnr_packages; }
 
-        const char * name(int index) const
+        std::string name(int index) const
         {
             if (index < 0 or index >= mfeatures)
-                return NULL;
+                throw std::runtime_error("Index is out of range.");
             return source->plattform_features->name[index];
         }
 
-        const int ident(int index) const
+        int ident(int index) const
         {
             if (index < 0 or index >= mfeatures)
-                return -1;
+                throw std::runtime_error("Index is out of range.");
             return source->plattform_features->ident[index];
         }
 
@@ -265,22 +255,6 @@ class x86_energy_measurement
         }
 
     private:
-        /* x86_energy stuff */
-        int mnr_packages;
-        int mfeatures;
-        struct x86_energy_source* source;
-        std::map<std::string, std::vector<double>> readings;
-
-        /* thread stuff */
-        /* minimal time beetween to sensor readings to get a value unequal zero */
-        std::chrono::milliseconds mreading_time;
-        std::thread m_thread;
-        std::mutex m_mutex;
-        std::condition_variable m_cond;
-        bool m_stop;
-        int is_thread;
-
-
         void measurement()
         {
             /* init x86_energy at the beginning */
@@ -321,6 +295,21 @@ class x86_energy_measurement
             }
         }
 
+
+        /* x86_energy stuff */
+        int mnr_packages;
+        int mfeatures;
+        struct x86_energy_source* source;
+        std::map<std::string, std::vector<double>> readings;
+
+        /* thread stuff */
+        /* minimal time beetween to sensor readings to get a value unequal zero */
+        std::chrono::milliseconds mreading_time;
+        std::thread m_thread;
+        std::mutex m_mutex;
+        std::condition_variable m_cond;
+        bool m_stop;
+        bool is_thread;
 };
 
 template <typename P, typename Policies>
@@ -372,7 +361,9 @@ public:
         }
 
         local_start = local_clock::now();
-        scorep_start = scorep::chrono::measurement_clock::now();
+        /* scorep_start = scorep::chrono::measurement_clock::now(); */
+        convert.synchronize_point();
+
         x86_energy.start();
 
         started = true;
@@ -392,7 +383,8 @@ public:
         }
 
         local_stop = local_clock::now();
-        scorep_stop = scorep::chrono::measurement_clock::now();
+        /* scorep_stop = scorep::chrono::measurement_clock::now(); */
+        convert.synchronize_point();
         stopped = true;
 
         try
@@ -415,7 +407,7 @@ public:
         logging::info() << "Successfully stopped x86_energy measurement and retrieved "
                         << readings_size << " values"
                         << " in " << chrono_to_millis(local_clock::now() - tp_after_stop) << " ms.";
-        logging::debug() << "scorep(ticks) start: " << scorep_start.count() << ", stop: " << scorep_stop.count();
+        /* logging::debug() << "scorep(ticks) start: " << scorep_start.count() << ", stop: " << scorep_stop.count(); */
         logging::debug() << "local(sys,us) start: " << local_start.time_since_epoch().count()
                          << ", stop: " << local_stop.time_since_epoch().count();
     }
@@ -450,13 +442,13 @@ public:
          * thread*/
         auto sensor_data = readings[sensor_name + handle.quantity()];
 
-        auto converter =
-            scorep_time_converter<local_clock::time_point>(local_start, local_stop, scorep_start, scorep_stop);
+        /* auto converter = */
+        /*     scorep_time_converter<local_clock::time_point>(local_start, local_stop, scorep_start, scorep_stop); */
         local_clock::duration duration_actual;
-        scorep::chrono::ticks scorep_start_actual;
+        /* scorep::chrono::ticks scorep_start_actual; */
 
         duration_actual = local_stop - local_start;
-        scorep_start_actual = scorep_start;
+        /* scorep_start_actual = scorep_start; */
 
 
         // We must use double here to avoid too much precision loss e.g. from integers in microseconds
@@ -464,11 +456,10 @@ public:
 
         logging::trace() << "Using effective sampling period of " << sampling_period << " sysclock ticks (usually us)";
 
-        const auto index_to_scorep_ticks = [sampling_period, scorep_start_actual, converter](size_t index)
+        const auto index_to_scorep_ticks = [sampling_period, start=local_start, converter=convert](size_t index)
         {
-            // TODO Add offset, needs further time computation
-            return scorep_start_actual +
-                   converter.to_ticks(local_clock::duration(static_cast<int64_t>(sampling_period * index)));
+            return converter.to_ticks(start +
+                    local_clock::duration(static_cast<int64_t>(sampling_period * index)));
         };
 
         logging::trace() << "Reading " << readings_size << " values from sensor " << handle.name();
@@ -637,7 +628,7 @@ public:
 private:
     const std::string prefix_ = "x86_energy/";
     scorep::plugin::metric_property add_metric_property(const std::string& name, 
-            int sensor, int node, std::string quantity)
+            int sensor, int node, std::string& quantity)
     {
         const std::string full_name = prefix_ + name + std::string("/") + quantity;
         std::string description;
@@ -665,8 +656,9 @@ private:
 
     }
 
-    scorep::chrono::ticks scorep_start, scorep_stop;
+    /* scorep::chrono::ticks scorep_start, scorep_stop; */
     std::chrono::time_point<local_clock> local_start, local_stop;
+    scorep::chrono::time_convert<> convert;
 
     x86_energy_measurement x86_energy;
     bool started = false;
@@ -676,7 +668,6 @@ private:
 
     /* offset for network cardes and so on in the blade */
     double offset;
-
 };
 
 SCOREP_METRIC_PLUGIN_CLASS(x86_energy_plugin, "x86_energy")
