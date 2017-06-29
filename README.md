@@ -39,7 +39,7 @@ To compile this plugin, you need:
 
 * `GIT_UPDATE_SUBMODULES` (default on)
 
-    Update git submdules also if they are not empty
+    Update git submodules also if they are not empty
 
 * `X86Energy_STATIC` (default on)
 

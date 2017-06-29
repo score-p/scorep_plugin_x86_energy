@@ -65,7 +65,7 @@ class x86_energy_sync_metric
         // We need some kind of constructor
         x86_energy_sync_metric(const std::string& full_name_, 
                 const std::string& name_, int sensor_, int node_, 
-                std::string& quantity_ )
+                const std::string& quantity_ )
         : mfull_name(full_name_), mname(name_), msensor(sensor_), mnode(node_)
           , mquantity(quantity_)
         {
@@ -75,7 +75,10 @@ class x86_energy_sync_metric
         // needs move and default constructor though!
         x86_energy_sync_metric(x86_energy_sync_metric&&) = default;
         x86_energy_sync_metric(const x86_energy_sync_metric&) = delete;
-        x86_energy_sync_metric& operator=(const x86_energy_sync_metric&) = default;
+        /* copy-assign */
+        x86_energy_sync_metric& operator=(const x86_energy_sync_metric&) = delete;
+        /* move assignment */
+        x86_energy_sync_metric& operator=(x86_energy_sync_metric&&) = default;
 
 
         double first    = -1;
@@ -563,7 +566,7 @@ public:
 
 private:
     scorep::plugin::metric_property add_metric_property(const std::string& name, 
-            int sensor, int node, std::string quantity)
+            int sensor, int node, std::string& quantity)
     {
         const std::string full_name = prefix_ + name + std::string("/") + quantity;
         std::string description;
