@@ -67,8 +67,8 @@ To compile this plugin, you need:
 
 * `Build Options of x86_energy` (see [here](https://github.com/tud-zih-energy/x86_adapt))
     All Build Options of x86_energy can be used, if x86_energy is automatically built, 
-    because it can't be found.  This Options will passed through to the x86_energy CMake
-    and ignored for this plugin.
+    because it can't be found. This Options will passed through to the
+    `x86_energy ` CMake and ignored for this plugin.
 
 
 ### Building
@@ -87,7 +87,8 @@ To compile this plugin, you need:
 
      > Note: If x86_energy can't be found it will be build automatically with 
      > static linked msr. But before this plugin is build x86_energy will be 
-     > installed so set an CMAKE_INSTALL_PREFIX like 
+     > installed in CMAKE_INSTALL_PREFIX if x86_energy should be linked
+     > dynamic so set an CMAKE_INSTALL_PREFIX like 
 
      >       cmake -DCMAKE_INSTALL_PREFIX=$PWD/local ..
 
@@ -97,7 +98,7 @@ To compile this plugin, you need:
 
         cmake .. -DX86_ENERGY_INCLUDE_DIRS=$HOME/x86_energy -DX86_ENERGY_LIBRARIES=$HOME/x86_energy/build -DX86Energy_STATIC=ON
 
-    Example for build x86_energy with x86_adapt support and x86_adapt not in
+    Example for build `x86_energy` with `x86_adapt` support and `x86_adapt` not in
     the LD_LIBRARY_PATH:
 
          cmake -DCMAKE_INSTALL_PREFIX=$PWD/local -DX86_ADAPT=On -DX86A_DIR=/usr/local/ ..

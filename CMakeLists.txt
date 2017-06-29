@@ -45,15 +45,22 @@ if (NOT X86_ENERGY_INCLUDE_DIRS OR NOT X86_ENERGY_LIBRARIES)
     endforeach()
     # source is already available through a git submodule for a specific 
     # version of x86_energy
-    # use prefix of the plugin
+    # use prefix of the plugin if x86_energy should be installed otherwise
+    # local dir because libx86_energy is statically linked
+    if (X86Energy_STATIC)
+        # set the install dir local
+        set (X86_ENERGY_INSTALL_PATH ${CMAKE_BINARY_DIR}/tmp)
+    else()
+        # set the install dir with CMAKE_INSTALL_PREFIX
+        set (X86_ENERGY_INSTALL_PATH ${CMAKE_INSTALL_PREFIX})
+    endif()
+        
     ExternalProject_Add(x86_energy
         SOURCE_DIR ${PROJECT_SOURCE_DIR}/x86_energy
 
-        CMAKE_ARGS "${CMAKE_ARGS};-DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}"
+        CMAKE_ARGS "${CMAKE_ARGS};-DCMAKE_INSTALL_PREFIX=${X86_ENERGY_INSTALL_PATH}"
         )
 
-    # set the install dir with CMAKE_INSTALL_PREFIX
-    set (X86_ENERGY_INSTALL_PATH ${CMAKE_INSTALL_PREFIX})
     # set include dir
     set (X86_ENERGY_INCLUDE_DIRS ${X86_ENERGY_INSTALL_PATH}/include)
 
