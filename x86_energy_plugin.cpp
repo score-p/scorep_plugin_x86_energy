@@ -64,44 +64,6 @@ static double chrono_to_millis(T duration)
     return std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(duration).count();
 }
 
-/* template <typename TP> */
-/* class scorep_time_converter */
-/* { */
-/*     using local_duration_t = typename TP::duration; */
-
-/* public: */
-/*     scorep_time_converter(TP local_start, TP local_stop, scorep::chrono::ticks scorep_start, */
-/*                           scorep::chrono::ticks scorep_stop) */
-/*     : local_start_(local_start), scorep_start_(scorep_start) */
-/*     { */
-/*         const auto local_duration = local_stop - local_start; */
-/*         const auto scorep_duration = scorep_stop - scorep_start; */
-/*         tick_rate_ = static_cast<double>(scorep_duration.count()) / local_duration.count(); */
-/*     } */
-
-/*     template <typename T> */
-/*     scorep::chrono::ticks to_ticks(const T duration) const */
-/*     { */
-/*         return to_ticks(std::chrono::duration_cast<local_duration_t>(duration)); */
-/*     } */
-
-/*     scorep::chrono::ticks to_ticks(const local_duration_t duration) const */
-/*     { */
-/*         return scorep::chrono::ticks(duration.count() * tick_rate_); */
-/*     } */
-
-/*     scorep::chrono::ticks to_ticks(const TP tp) const */
-/*     { */
-/*         const auto tp_offset = tp - local_start_; */
-/*         return scorep_start_ + to_ticks(tp_offset); */
-/*     } */
-
-/* private: */
-/*     TP local_start_; */
-/*     scorep::chrono::ticks scorep_start_; */
-/*     double tick_rate_; */
-/* }; */
-
 /**
  * Our x86_energy metric handle
  **/
@@ -361,7 +323,6 @@ public:
         }
 
         local_start = local_clock::now();
-        /* scorep_start = scorep::chrono::measurement_clock::now(); */
         convert.synchronize_point();
 
         x86_energy.start();
@@ -383,7 +344,6 @@ public:
         }
 
         local_stop = local_clock::now();
-        /* scorep_stop = scorep::chrono::measurement_clock::now(); */
         convert.synchronize_point();
         stopped = true;
 
@@ -407,7 +367,6 @@ public:
         logging::info() << "Successfully stopped x86_energy measurement and retrieved "
                         << readings_size << " values"
                         << " in " << chrono_to_millis(local_clock::now() - tp_after_stop) << " ms.";
-        /* logging::debug() << "scorep(ticks) start: " << scorep_start.count() << ", stop: " << scorep_stop.count(); */
         logging::debug() << "local(sys,us) start: " << local_start.time_since_epoch().count()
                          << ", stop: " << local_stop.time_since_epoch().count();
     }
@@ -442,13 +401,7 @@ public:
          * thread*/
         auto sensor_data = readings[sensor_name + handle.quantity()];
 
-        /* auto converter = */
-        /*     scorep_time_converter<local_clock::time_point>(local_start, local_stop, scorep_start, scorep_stop); */
-        local_clock::duration duration_actual;
-        /* scorep::chrono::ticks scorep_start_actual; */
-
         duration_actual = local_stop - local_start;
-        /* scorep_start_actual = scorep_start; */
 
 
         // We must use double here to avoid too much precision loss e.g. from integers in microseconds
@@ -656,7 +609,6 @@ private:
 
     }
 
-    /* scorep::chrono::ticks scorep_start, scorep_stop; */
     std::chrono::time_point<local_clock> local_start, local_stop;
     scorep::chrono::time_convert<> convert;
 
