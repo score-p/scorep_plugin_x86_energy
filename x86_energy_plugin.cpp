@@ -346,7 +346,7 @@ public:
             return;
         }
 
-        local_stop = local_clock::now();
+        /* time measurement and conversion between time and scorep ticks */
         convert.synchronize_point();
         stopped = true;
 
@@ -370,8 +370,7 @@ public:
         logging::info() << "Successfully stopped x86_energy measurement and retrieved "
                         << readings_size << " values"
                         << " in " << chrono_to_millis(local_clock::now() - tp_after_stop) << " ms.";
-        logging::debug() << "local(sys,us) start: " << local_start.time_since_epoch().count()
-                         << ", stop: " << local_stop.time_since_epoch().count();
+        logging::debug() << "Duration of measurement: " << chrono_to_millis(convert.duration()) << " ms";
     }
 
     void synchronize(bool is_responsible, SCOREP_MetricSynchronizationMode sync_mode)
@@ -404,7 +403,7 @@ public:
          * thread*/
         auto sensor_data = readings[sensor_name + handle.quantity()];
 
-        local_clock::duration duration_actual(local_stop - local_start);
+        local_clock::duration duration_actual(convert.duration());
 
 
         // We must use double here to avoid too much precision loss e.g. from integers in microseconds
@@ -612,7 +611,7 @@ private:
 
     }
 
-    std::chrono::time_point<local_clock> local_start, local_stop;
+    std::chrono::time_point<local_clock> local_start;
     scorep::chrono::time_convert<> convert;
 
     x86_energy_measurement x86_energy;
