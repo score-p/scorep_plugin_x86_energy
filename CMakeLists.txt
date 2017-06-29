@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 project(x86_energy_plugin)
 
+option(GIT_UPDATE_SUBMODULES "Automatically update git submodules during CMake run" ON)
+
 # Intialize git submodules if not done already
 file(GLOB SUBMODULE_FILES "common/*")
 list(LENGTH SUBMODULE_FILES COUNT_COMMON)
@@ -11,6 +13,9 @@ list(LENGTH SUBMODULE_FILES COUNT_SCOREP)
 if (${COUNT_COMMON} EQUAL 0 OR ${COUNT_SCOREP} EQUAL 0 OR ${COUNT_X86_ENERGY} EQUAL 0 )
     message(STATUS "Initializing git submodule")
     execute_process(COMMAND "git" "submodule" "init" WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+    execute_process(COMMAND "git" "submodule" "update" WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
+elseif(GIT_UPDATE_SUBMODULES)
+    message(STATUS "Update git submodule but directories aren't empty")
     execute_process(COMMAND "git" "submodule" "update" WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}")
 endif ()
 

@@ -37,6 +37,10 @@ To compile this plugin, you need:
 
 ### Build Options
 
+* `GIT_UPDATE_SUBMODULES` (default on)
+
+    Update git submdules also if they are not empty
+
 * `X86Energy_STATIC` (default on)
 
     Links `x86_energy` lib static.
