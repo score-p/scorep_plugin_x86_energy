@@ -25,8 +25,6 @@
  * THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// Must be defined before the include!
-#define ENV_CONFIG_PREFIX "SCOREP_METRIC_x86_energy_sync_plugin_"
 #include <scorep/plugin/plugin.hpp>
 
 #include <string>
@@ -77,7 +75,7 @@ class x86_energy_sync_metric
         // needs move and default constructor though!
         x86_energy_sync_metric(x86_energy_sync_metric&&) = default;
         x86_energy_sync_metric(const x86_energy_sync_metric&) = delete;
-        x86_energy_sync_metric& operator=(const x86_energy_sync_metric&) = delete;
+        x86_energy_sync_metric& operator=(const x86_energy_sync_metric&) = default;
 
 
         double first    = -1;
@@ -86,15 +84,15 @@ class x86_energy_sync_metric
         double last     = 0;
 
         /* getter functions */
-        std::string name() { return mname; }
+        std::string name() const { return mname; }
 
-        std::string full_name() { return mfull_name; }
+        std::string full_name() const { return mfull_name; }
 
-        int sensor() { return msensor; }
+        int sensor() const { return msensor; }
 
-        int node() { return mnode; }
+        int node() const { return mnode; }
 
-        std::string quantity() { return mquantity; }
+        std::string quantity() const { return mquantity; }
 
         /* functions for measure time handling */
         void set_timepoint()
@@ -122,9 +120,6 @@ class x86_energy_sync_metric
         /* auto is not allowed in non static class member */
         std::chrono::time_point<std::chrono::steady_clock> current_measurement;
         std::chrono::time_point<std::chrono::steady_clock> last_measurement;
-
-    friend std::ostream& operator<<(std::ostream& s, 
-            const x86_energy_sync_metric& metric);
 };
 
 /**
@@ -133,8 +128,8 @@ class x86_energy_sync_metric
  **/
 std::ostream& operator<<(std::ostream& s, const x86_energy_sync_metric& metric)
 {
-    s << "(" << metric.mfull_name << ", " << metric.msensor << " on " 
-        << metric.mnode << ")";
+    s << "(" << metric.full_name() << ", " << metric.sensor() << " on " 
+        << metric.node() << ")";
     return s;
 }
 
@@ -147,30 +142,6 @@ class x86_energy_sync_plugin : public scorep::plugin::base<x86_energy_sync_plugi
     x86_energy_sync_object_id>
 {
 public:
-    std::map<std::string,bool> already_saved_metrics;
-
-private:
-    const std::string prefix_ = "x86_energy/";
-    std::string hostname;
-    bool is_resposible = false;
-    int nr_packages = -1;
-    /* because struct x86_energy_source is from a C library and can't be freed 
-     * it has to be realeased before the destructor is called*/
-    struct x86_energy_source *source;
-    int features = 0;
-
-    /* minimal time beetween to sensor readings to get a value unequal zero */
-    std::chrono::milliseconds reading_time;
-    /* offset for network cardes and so on in the blade */
-    double offset;
-
-    pid_t responsible_thread = -1;
-
-    long int invalid_result_count = 0;
-    long int valid_result_count = 0;
-
-public:
-    
     /**
      * Initialization of the plugin.
      *
@@ -554,9 +525,7 @@ public:
         
         /* also match metric name core for core0 and core1 */
         scorep::plugin::util::matcher match(metric_name + "*");
-        logging::debug() << "before segfault";
-        logging::debug() << source->get_nr_packages();
-        logging::debug() << "after segfault";
+
         for (int i = 0; i < source->get_nr_packages(); i ++)
         {
             for (int j = 0; j < source->plattform_features->num; j++)
@@ -649,6 +618,27 @@ private:
             logging::debug() << "not responsible";
         }
     }
+
+    std::map<std::string,bool> already_saved_metrics;
+
+    const std::string prefix_ = "x86_energy/";
+    std::string hostname;
+    bool is_resposible = false;
+    int nr_packages = -1;
+    /* because struct x86_energy_source is from a C library and can't be freed 
+     * it has to be realeased before the destructor is called*/
+    struct x86_energy_source *source;
+    int features = 0;
+
+    /* minimal time beetween to sensor readings to get a value unequal zero */
+    std::chrono::milliseconds reading_time;
+    /* offset for network cardes and so on in the blade */
+    double offset;
+
+    pid_t responsible_thread = -1;
+
+    long int invalid_result_count = 0;
+    long int valid_result_count = 0;
 };
 
 SCOREP_METRIC_PLUGIN_CLASS(x86_energy_sync_plugin, "x86_energy_sync")
