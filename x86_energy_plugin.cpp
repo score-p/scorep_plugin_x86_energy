@@ -562,16 +562,17 @@ public:
                 }
             }
 
-            if (properties.empty())
-            {
-                logging::fatal()<< "No metrics added. Check your metrics!";
-            }
             /* add blade counter if necessary */
-            else if (match("BLADE") or match("blade"))
+            if (match("BLADE") or match("blade"))
             {
                 /* rapl has no member blade */
                 logging::debug() << "add virtual sensor: BLADE";
                 properties.push_back(add_metric_property("BLADE", -1, -1, quantity));
+            }
+
+            if (properties.empty())
+            {
+                logging::fatal()<< "No metrics added. Check your metrics!";
             }
 
             logging::debug() << "get_event_info(" << metric_name << ") Quantity: "
