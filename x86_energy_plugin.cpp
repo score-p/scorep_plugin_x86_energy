@@ -613,7 +613,7 @@ private:
         {
             /* accumulated_last() like in the hdeem plugin
              * with accumulated_start() you will get very high negative results */
-            return scorep::plugin::metric_property(full_name, " Energy Consumption", "mJ")
+            return scorep::plugin::metric_property(full_name, " Energy Consumption", "J")
                 .accumulated_last()
                 .value_int();
         }
@@ -621,7 +621,9 @@ private:
         {
             return scorep::plugin::metric_property(full_name, " Power Consumption", "W")
                 .absolute_last()
-                .value_int();
+                .value_int()
+                .decimal()
+                .exponent(-3);
         }
         else
         {
