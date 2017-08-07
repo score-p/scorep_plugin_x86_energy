@@ -623,7 +623,7 @@ private:
                 .absolute_last()
                 .value_int()
                 .decimal()
-                .exponent(-3);
+                .value_exponent(-3);
         }
         else
         {
