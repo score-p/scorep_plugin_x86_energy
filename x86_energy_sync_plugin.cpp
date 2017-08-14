@@ -545,8 +545,9 @@ public:
             }
         }
 
-        /* add blade counter if necessary */
-        if (match("BLADE") or match("blade"))
+        /* add blade counter if claimed */
+        if (metric_name.find("BLADE") != std::string::npos or
+                metric_name.find("blade") != std::string::npos)
         {
             /* rapl has no member blade */
             logging::debug() << "add virtual sensor: BLADE";

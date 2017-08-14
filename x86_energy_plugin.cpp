@@ -140,8 +140,8 @@ class x86_energy_measurement
 {
 public:
     x86_energy_measurement()
-    /* setting default value for reading_time */
-    : mreading_time(std::chrono::milliseconds(5)), is_thread(0)
+    /* setting default value for intervall_us */
+    : mintervall_us(std::chrono::microseconds(50000)), is_thread(0)
     {
         /* setting correct pointer for x86_energy */
         /* source = get_available_sources_nothread(); */
@@ -190,18 +190,18 @@ public:
         return source->plattform_features->ident[index];
     }
 
-    void set_reading_time(std::chrono::milliseconds reading_time)
+    void set_intervall_us(std::chrono::microseconds intervall_us)
     {
-        if (reading_time <= std::chrono::milliseconds(0))
+        if (intervall_us <= std::chrono::microseconds(0))
         {
-            logging::info() << "Reading time is with " << reading_time.count()
-                            << "ms to low. Use default value with " << mreading_time.count()
-                            << "ms";
+            logging::info() << "Time ntervall is with " << intervall_us.count()
+                            << "us to low. Use default value with " << mintervall_us.count()
+                            << "us";
         }
         else
         {
-            logging::info() << "Set minimum reading time to " << reading_time.count() << "ms";
-            mreading_time = reading_time;
+            logging::info() << "Set minimum time intervall to " << intervall_us.count() << "us";
+            mintervall_us = intervall_us;
         }
     }
 
@@ -247,8 +247,8 @@ private:
         while (!m_stop)
         {
             read();
-            m_cond.wait_for(lock, mreading_time);
-            /* std::this_thread::sleep_for(mreading_time); */
+            m_cond.wait_for(lock, mintervall_us);
+            /* std::this_thread::sleep_for(mintervall_us); */
         }
 
         /* fini x86_energy at the end */
@@ -285,7 +285,7 @@ private:
 
     /* thread stuff */
     /* minimal time beetween to sensor readings to get a value unequal zero */
-    std::chrono::milliseconds mreading_time;
+    std::chrono::microseconds mintervall_us;
     std::thread m_thread;
     std::mutex m_mutex;
     std::condition_variable m_cond;
@@ -307,24 +307,14 @@ public:
         offset = stod(scorep::environment_variable::get("OFFSET", "70000.0"));
         logging::info() << "set offset to " << offset << "mW";
 
-        std::string env_var("INTERVAL_US");
-        int def_value = 5;
-        /* try old environment first */
-        if (scorep::environment_variable::get(env_var) != "")
-        {
-            logging::warn() << "using old Environment variable " << env_var
-                            << "please use READING_TIME instead";
-        }
-        /* otherwise use current environment variable */
-        else
-        {
-            env_var = "READING_TIME";
-            def_value = 0;
-        }
-        auto reading_time = static_cast<std::chrono::milliseconds>(
-            stoi(scorep::environment_variable::get(env_var, std::to_string(def_value))));
+        /* get intervall_us and cast ist in the right way */
+        auto intervall_us = static_cast<std::chrono::microseconds>(
+            stoi(scorep::environment_variable::get("intervall_us", "50000")));
+        logging::info() << "set time intervall between to measuring points to "
+            << intervall_us.count() << "us";
 
-        x86_energy.set_reading_time(reading_time);
+        /* set the correct interval for the measurement */
+        x86_energy.set_intervall_us(intervall_us);
     }
 
 public:
@@ -580,8 +570,9 @@ public:
             }
         }
 
-        /* add blade counter if necessary */
-        if (match("BLADE") or match("blade"))
+        /* add blade counter if claimed */
+        if (metric_name.find("BLADE") != std::string::npos or
+                metric_name.find("blade") != std::string::npos)
         {
             /* rapl has no member blade */
             logging::debug() << "add virtual sensor: BLADE";
@@ -615,7 +606,9 @@ private:
              * with accumulated_start() you will get very high negative results */
             return scorep::plugin::metric_property(full_name, " Energy Consumption", "J")
                 .accumulated_last()
-                .value_int();
+                .value_int()
+                .decimal()
+                .value_exponent(-3);
         }
         else if (quantity == "P")
         {
