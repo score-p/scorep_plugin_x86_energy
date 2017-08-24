@@ -260,8 +260,8 @@ E.g.:
     On Intel CPUs, the registers are updated roughly every msec. If you choose an interval of 1ms
     you might find highly variating power consumptions. To gain most exact values
     relating to temporal granularity, you should set the intervall to 10, but this
-    gives less accure values. If you can live with less granularity, you should
-    set it to 100000. This gives also more accure values.
+    gives less accurate values. If you can live with less granularity, you should
+    set it to 100000. This gives also more accurate values.
 
 * `SCOREP_METRIC_X86_ENERGY_SYNC_PLUGIN_READING_TIME` (default `0`)
 

@@ -307,7 +307,7 @@ public:
         offset = stod(scorep::environment_variable::get("OFFSET", "70000.0"));
         logging::info() << "set offset to " << offset << "mW";
 
-        /* get intervall_us and cast ist in the right way */
+        /* get intervall_us and cast it in the right way */
         auto intervall_us = static_cast<std::chrono::microseconds>(
             stoi(scorep::environment_variable::get("intervall_us", "50000")));
         logging::info() << "set time intervall between to measuring points to "
