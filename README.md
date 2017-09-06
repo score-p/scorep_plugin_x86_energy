@@ -172,6 +172,16 @@ be recorded when tracing an application. You can add the following metrics:
 
     Collect power consumption information for every available counter.
 
+* `BLADE/E`
+
+    Collect sum of the energy consumption information for every available
+    counter except of CORE because PACKAGE already contains it
+
+* `BLADE/P`
+
+    Collect sum of the power consumption information for every available
+    counter except of CORE because PACKAGE already contains it
+
 * `PACKAGE/E`
     or old syntax: `package_energy`
 
@@ -242,15 +252,16 @@ E.g.:
     because there are included in package.
     The default value of 70000.0 mW was measured on Taurus
 
-* `SCOREP_X86_ENERGY_PLUGIN_READING_TIME` (default `5`)
-   or like the old plugin: `SCOREP_X86_ENERGY_PLUGIN_INTERVALL_US`
+* `SCOREP_X86_ENERGY_PLUGIN_INTERVALL_US` (default `50000`)
 
-    The time in millisecs, between two consecutive reads of the power/energy values. A longer interval
+    The time in microsecs, between two consecutive reads of the power/energy values. A longer interval
     means less disturbance, a shorter interval is more exact.
 
     On Intel CPUs, the registers are updated roughly every msec. If you choose an interval of 1ms
-    you might find highly variating power consumptions. To gain most exact values, you should set
-    the amplitude to 1, if you can live with less accuracy, you should set it to 100.
+    you might find highly variating power consumptions. To gain most exact values
+    relating to temporal granularity, you should set the intervall to 10, but this
+    gives less accurate values. If you can live with less granularity, you should
+    set it to 100000. This gives also more accurate values.
 
 * `SCOREP_METRIC_X86_ENERGY_SYNC_PLUGIN_READING_TIME` (default `0`)
 
@@ -275,6 +286,6 @@ E.g.:
 * Michael Werner (michael.werner3 at tu-dresden dot de)
 
 ### C++ versions
-* Andreas Gocht  <andreas.gocht  at tu-dresden dot de>
+* Andreas Gocht  (andreas.gocht  at tu-dresden dot de)
 * Sven Schiffner (sven.schiffner at tu-dresden dot de)
 
