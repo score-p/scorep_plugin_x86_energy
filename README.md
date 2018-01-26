@@ -69,7 +69,7 @@ To compile this plugin, you need:
     Enables MPI communication for the sync plugin, and allows to run more than one MPI process
     per node.
 
-* `Build Options of x86_energy` (see [here](https://github.com/tud-zih-energy/x86_adapt))
+* `Build Options of x86_energy` (see [here](https://github.com/tud-zih-energy/x86_energy))
     All Build Options of x86_energy can be used, if x86_energy is automatically built, 
     because it can't be found. This Options will passed through to the
     `x86_energy ` CMake and ignored for this plugin.
