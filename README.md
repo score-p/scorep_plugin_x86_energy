@@ -17,8 +17,6 @@ To compile this plugin, you need:
 
 * A C++ 14 compiler
 
-* `libx86_energy` (see [here](https://github.com/tud-zih-energy/x86_energy))
-
 * CMake
 
 * Score-P Version 2+ (`SCOREP_METRIC_PLUGIN_VERSION` >= 1 (for C++ version)
@@ -37,22 +35,15 @@ To compile this plugin, you need:
 
 ### Build Options
 
-* `GIT_UPDATE_SUBMODULES` (default on)
 
-    Update git submodules also if they are not empty
+* `X86_ADAPT` (default OFF)
 
-* `X86Energy_STATIC` (default on)
+    uses x86_adapt to build x86_energy
 
-    Links `x86_energy` lib static.
+* `LIBMSR` (default OFF)
 
-* `X86_ENERGY_INCLUDE_DIRS` (usually will be found automatically)
+    uses libmsr to build x86_energy
 
-    Path to `x86_energy` header files.
-
-* `X86_ENERGY_LIBRARIES` (usually will be found automatically)
-
-    Should point to the `x86_energy` library (shared or static), including
-    the path
 
 * `SCOREP_CONFIG`
 
@@ -79,41 +70,28 @@ To compile this plugin, you need:
 
 1. Create a build directory
 
-        mkdir build
-        cd build
+```
+mkdir build
+cd build
+```
 
 2. Invoking CMake
 
-    Specify the `x86_energy` directory if it is not in the default path with `-DX86_ENERGY_INCLUDE_DIRS=<PATH>`.
-    Default is to link static. To link static turn `-DX86Energy_STATIC=OFF`.
-
-        cmake ..
-
-     > Note: If x86_energy can't be found it will be build automatically with 
-     > static linked msr. But before this plugin is build x86_energy will be 
-     > installed in CMAKE_INSTALL_PREFIX if x86_energy should be linked
-     > dynamic so set an CMAKE_INSTALL_PREFIX like 
-
-     >       cmake -DCMAKE_INSTALL_PREFIX=$PWD/local ..
-
-     > or have write permissions to the default INSTALL_PREFIX, mostly /usr/local
-
-    Example for a prebuild static linked `x86_energy` which is not in the default path:
-
-        cmake .. -DX86_ENERGY_INCLUDE_DIRS=$HOME/x86_energy -DX86_ENERGY_LIBRARIES=$HOME/x86_energy/build -DX86Energy_STATIC=ON
-
-    Example for build `x86_energy` with `x86_adapt` support and `x86_adapt` not in
-    the LD_LIBRARY_PATH:
-
-         cmake -DCMAKE_INSTALL_PREFIX=$PWD/local -DX86_ADAPT=On -DX86A_DIR=/usr/local/ ..
+```
+cmake .. -DX86_ENERGY=ON
+```
 
 3. Invoking make
 
-        make
+```
+make
+```
 
 4. Install the files (optional)
 
-        make install
+```
+make install
+```
 
 > Note: Make sure to add the subfolder `lib` to your `LD_LIBRARY_PATH` or if you
 > didn't use make install that the plugin is in a location listed in 
@@ -121,8 +99,6 @@ To compile this plugin, you need:
 
 >       export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$PWD
 
-> If `x86_energy` is linked dynamic then the location of `x86_energy` has to be in the
-> `LD_LIBRARY_PATH` as well.
 
 ## Usage
 
