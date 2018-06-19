@@ -7,3 +7,12 @@
 [submodule "scorep_cxx_wrapper"]
 	path = scorep_cxx_wrapper
 	url = https://github.com/score-p/scorep_plugin_cxx_wrapper
+[submodule "extern/scorep_plugin_cxx_wrapper"]
+	path = extern/scorep_plugin_cxx_wrapper
+	url = https://github.com/score-p/scorep_plugin_cxx_wrapper
+[submodule "extern/x86_energy"]
+	path = extern/x86_energy
+	url = https://github.com/tud-zih-energy/x86_energy
+[submodule "extern/scorep_plugin_common"]
+	path = extern/scorep_plugin_common
+	url = https://github.com/score-p/scorep_plugin_common.git
