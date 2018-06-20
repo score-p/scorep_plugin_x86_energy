@@ -78,7 +78,7 @@ cd build
 2. Invoking CMake
 
 ```
-cmake .. -DX86_ENERGY=ON
+cmake .. -DX86_ADAPT=ON
 ```
 
 3. Invoking make
