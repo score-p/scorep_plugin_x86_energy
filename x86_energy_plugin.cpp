@@ -50,6 +50,8 @@ extern "C" {
 #include <x86_energy.h>
 }
 
+#include <x86_energy_metric.hpp>
+
 using namespace scorep::plugin::policy;
 
 using scorep::plugin::logging;
@@ -62,75 +64,6 @@ static double chrono_to_millis(T duration)
 {
     return std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(duration).count();
 }
-
-/**
- * Our x86_energy metric handle
- **/
-class x86_energy_metric
-{
-public:
-    // We need some kind of constructor
-    x86_energy_metric(const std::string& full_name_, const std::string& name_, int sensor_,
-                      int node_, const std::string& quantity_)
-    : mfull_name(full_name_), mname(name_), msensor(sensor_), mnode(node_), mquantity(quantity_)
-    {
-    }
-
-    // delete copy constructor to avoid ... copies,
-    // needs move and default constructor though!
-    x86_energy_metric(x86_energy_metric&&) = default;
-    x86_energy_metric(const x86_energy_metric&) = delete;
-    /* copy-assign */
-    x86_energy_metric& operator=(const x86_energy_metric&) = delete;
-    /* move assignment */
-    x86_energy_metric& operator=(x86_energy_metric&&) = default;
-
-    /* getter functions */
-    std::string name() const
-    {
-        return mname;
-    } // return by copy
-
-    std::string full_name() const
-    {
-        return mfull_name;
-    }
-
-    int sensor() const
-    {
-        return msensor;
-    }
-
-    int node() const
-    {
-        return mnode;
-    }
-
-    std::string quantity() const
-    {
-        return mquantity;
-    }
-
-private:
-    std::string mfull_name;
-    std::string mname;
-    /* sensor is the ident number of x86_energy */
-    int msensor;
-    /* on wich cpu is the sensor */
-    int mnode;
-    std::string mquantity;
-};
-
-/**
- * operator to print the metric handle
- *
- **/
-std::ostream& operator<<(std::ostream& s, const x86_energy_metric& metric)
-{
-    s << "(" << metric.full_name() << ", " << metric.sensor() << " on " << metric.node() << ")";
-    return s;
-}
-
 /**
  * like hdeem but for x86_energy and better
  *
@@ -297,8 +230,8 @@ template <typename P, typename Policies>
 using x86_energy_object_id = object_id<x86_energy_metric, P, Policies>;
 
 class x86_energy_plugin
-: public scorep::plugin::base<x86_energy_plugin, async, per_host, post_mortem, scorep_clock,
-                              x86_energy_object_id>
+    : public scorep::plugin::base<x86_energy_plugin, async, per_host, post_mortem, scorep_clock,
+                                  x86_energy_object_id>
 {
 public:
     x86_energy_plugin()
@@ -311,7 +244,7 @@ public:
         auto intervall_us = static_cast<std::chrono::microseconds>(
             stoi(scorep::environment_variable::get("intervall_us", "50000")));
         logging::info() << "set time intervall between to measuring points to "
-            << intervall_us.count() << "us";
+                        << intervall_us.count() << "us";
 
         /* set the correct interval for the measurement */
         x86_energy.set_intervall_us(intervall_us);
@@ -572,7 +505,7 @@ public:
 
         /* add blade counter if claimed */
         if (metric_name.find("BLADE") != std::string::npos or
-                metric_name.find("blade") != std::string::npos)
+            metric_name.find("blade") != std::string::npos)
         {
             /* rapl has no member blade */
             logging::debug() << "add virtual sensor: BLADE";
