@@ -6,7 +6,7 @@ option(ENABLE_MPI "Build with MPI support." ON)
 add_subdirectory(extern)
 
 # x86_energy_sync_plugin
-add_library(x86_energy_sync_plugin SHARED x86_energy_sync_plugin)
+add_library(x86_energy_sync_plugin SHARED src/x86_energy_sync_plugin.cpp)
 target_compile_features(x86_energy_sync_plugin PUBLIC cxx_std_14)
 target_link_libraries(x86_energy_sync_plugin PUBLIC scorep-plugin-cxx x86_energy::x86_energy_cxx)
 target_include_directories(x86_energy_sync_plugin PUBLIC include)
