@@ -25,7 +25,7 @@ public:
     : mfull_name(full_name_), mname(name_), msensor(std::move(sensor_)), mquantity(quantity_),
       im_blade(im_blade_), offset(offset_)
     {
-        init_energy = read();
+        init_energy = read(true);
         first_measurement = std::chrono::steady_clock::now();
     }
 
@@ -54,21 +54,24 @@ public:
         return mfull_name;
     }
 
-    double read()
+    double read(bool init = false)
     {
         double tmp = 0;
         for (auto& sens : msensor)
         {
             tmp += sens.read();
         }
-        tmp = tmp - init_energy;
-        if (im_blade)
+        if (!init)
         {
-            tmp = tmp +
-                  offset *
-                      std::chrono::duration_cast<std::chrono::seconds>(
-                          std::chrono::steady_clock::now() - first_measurement)
-                          .count();
+            tmp = tmp - init_energy;
+            if (im_blade)
+            {
+                tmp = tmp +
+                      offset *
+                          std::chrono::duration_cast<std::chrono::seconds>(
+                              std::chrono::steady_clock::now() - first_measurement)
+                              .count();
+            }
         }
         return tmp;
     }

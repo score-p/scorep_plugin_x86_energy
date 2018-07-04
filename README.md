@@ -21,28 +21,8 @@ To compile this plugin, you need:
 
 * Score-P Version 2+ (`SCOREP_METRIC_PLUGIN_VERSION` >= 1 (for C++ version)
 
-* For the use of x86_energy:
-
-   Reading `msr` directly:
-
-      The kernel module `msr` should be active (you might use `modprobe`) and you should have reading
-      access to `/dev/cpu/*/msr`.
-
-   Reading energy values through `x86_adapt` (see [here](https://github.com/tud-zih-energy/x86_adapt)):
-
-      The kernel module `x86_adapt_driver` should be active and and should have reading access to
-      `/dev/x86_adapt/cpu/*`.
 
 ### Build Options
-
-
-* `X86_ADAPT` (default OFF)
-
-    uses x86_adapt to build x86_energy
-
-* `LIBMSR` (default OFF)
-
-    uses libmsr to build x86_energy
 
 
 * `SCOREP_CONFIG`
@@ -58,7 +38,7 @@ To compile this plugin, you need:
 * `ENABLE_MPI`
 
     Enables MPI communication for the sync plugin, and allows to run more than one MPI process
-    per node.
+    per node. Default: ON
 
 * `Build Options of x86_energy` (see [here](https://github.com/tud-zih-energy/x86_energy))
     All Build Options of x86_energy can be used, if x86_energy is automatically built, 
@@ -78,7 +58,7 @@ cd build
 2. Invoking CMake
 
 ```
-cmake .. -DX86_ADAPT=ON
+cmake .. 
 ```
 
 3. Invoking make
@@ -138,75 +118,9 @@ The sync plugin (`x86_energy_sync_plugin`) works with profiling and tracing.
 `SCOREP_METRIC_X86_ENERGY_SYNC_PLUGIN` specifies the software events that shall
 be recorded when tracing an application. You can add the following metrics:
 
-* `*/E`
-    or old syntax: `*_energy`
+* `*`
+    whatever is given, there are always all energy metrics recorded.
 
-    Collect energy consumption information for every available counter.
-
-* `*/P`
-    or old syntax: `*_power`
-
-    Collect power consumption information for every available counter.
-
-* `BLADE/E`
-
-    Collect sum of the energy consumption information for every available
-    counter except of CORE because PACKAGE already contains it
-
-* `BLADE/P`
-
-    Collect sum of the power consumption information for every available
-    counter except of CORE because PACKAGE already contains it
-
-* `PACKAGE/E`
-    or old syntax: `package_energy`
-
-    Collect power consumption information for every package.
-
-* `PACKAGE/P`
-    or old syntax: `package_power`
-
-    Collect power consumption information for every package.
-
-* `CORE/E`
-    or old syntax: `core_energy`
-
-    Collect power consumption information for every core.
-
-* `CORE/P`
-    or old syntax: `core_power`
-
-    Collect power consumption information for every core.
-
-* `GPU/E`
-    or old syntax: `gpu_energy`
-
-    Collect power consumption information for every gpu.
-
-* `GPU/P`
-    or old syntax: `gpu_power`
-
-    Collect power consumption information for every gpu.
-
-* `DRAM/E`
-    or old syntax: `dram_energy`
-
-    Collect power consumption information for every dram.
-
-* `DRAM/P`
-   or old syntax: `dram_power`
-
-    Collect power consumption information for every dram.
-
-* `PACKAGE0/E`, etc.
-
-    Collect power consumption information for package on node 0.
-    This also works with every other metric.
-
-E.g.:
-
-    export SCOREP_METRIC_X86_ENERGY_PLUGIN="GPU/P" or
-    export SCOREP_METRIC_X86_ENERGY_SYNC_PLUGIN="GPU/P"
 
 ### Environment variables
 
@@ -220,13 +134,13 @@ E.g.:
     Controls the output verbosity of the plugin. Possible values are: `FATAL`, `ERROR`, `WARN`,
     `INFO`, `DEBUG`. If set to any other value, `DEBUG` is used. Case in-sensitive.
 
-* `SCOREP_METRIC_X86_ENERGY_SYNC_PLUGIN_OFFSET` (default `70000.0`)
+* `SCOREP_METRIC_X86_ENERGY_SYNC_PLUGIN_OFFSET` (default `70.0`)
 
-    Can be set to any double variable. Defines the offset in mW that is added to 
+    Can be set to any double variable. Defines the offset in W that is added to 
     the blade, because with RAPL only the energy consumption of the
     CPU is measurable. Blade is the sum of all RAPL values excepted the core
     because there are included in package.
-    The default value of 70000.0 mW was measured on Taurus
+    The default value of 70W was measured on Taurus
 
 * `SCOREP_X86_ENERGY_PLUGIN_INTERVALL_US` (default `50000`)
 
@@ -238,22 +152,6 @@ E.g.:
     relating to temporal granularity, you should set the intervall to 10, but this
     gives less accurate values. If you can live with less granularity, you should
     set it to 100000. This gives also more accurate values.
-
-* `SCOREP_METRIC_X86_ENERGY_SYNC_PLUGIN_READING_TIME` (default `0`)
-
-    Can be set to any int variable. Defines the minimal time between to sensor 
-    readings in micro seconds that will return an number unequal to zero.
-    For compatibility with Periscope this should be set to zero.
-
-### If anything fails
-
-1. Check whether the plugin library can be loaded from the `LD_LIBRARY_PATH`.
-
-2. Check whether you are allowed to read `/dev/cpu/*/msr` and your x86_energy 
-   functionality is working properly.
-   Consulting the x86_energy repo for some suggestions.
-
-3. Write a mail to the author.
 
 ## Authors
 

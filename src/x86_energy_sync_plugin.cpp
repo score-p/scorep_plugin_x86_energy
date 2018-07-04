@@ -353,7 +353,7 @@ x86_energy_sync_plugin::get_metric_properties(const std::string& name)
                 catch (std::runtime_error& e)
                 {
                     logging::error() << "Could not access source: " << active_source->name()
-                                     << " Reason : " << e.what();
+                                     << " for granularity: " << index << " Reason : " << e.what();
                 }
             }
         }
@@ -361,8 +361,8 @@ x86_energy_sync_plugin::get_metric_properties(const std::string& name)
 
     if (!blade_sources.empty())
     {
-        double offset = stod(scorep::environment_variable::get("OFFSET", "70000.0"));
-        logging::info("X86_ENERGY_SYNC_PLUGIN") << "set offset to " << offset << "mW";
+        double offset = stod(scorep::environment_variable::get("OFFSET", "70.0"));
+        logging::info("X86_ENERGY_SYNC_PLUGIN") << "set offset to " << offset << "W";
 
         std::string metric_name = "x86_energy/BLADE/E";
         auto& handle = make_handle(metric_name, metric_name, metric_name, std::move(blade_sources),
