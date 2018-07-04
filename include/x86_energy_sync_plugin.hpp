@@ -43,7 +43,7 @@ private:
                                                         int node, std::string& quantity);
 
     x86_energy::Mechanism mechanism;
-    std::unique_ptr<x86_energy::AccessSource> active_source;
+    std::vector<std::unique_ptr<x86_energy::AccessSource>> active_sources;
 
     x86_energy::Architecture architecture_; /**< Architecture tree, e.g. SYSTEM->PKG->...*/
 

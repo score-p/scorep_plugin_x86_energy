@@ -102,7 +102,7 @@ x86_energy_sync_plugin::x86_energy_sync_plugin()
         {
             source.init();
 
-            active_source = std::make_unique<x86_energy::AccessSource>(std::move(source));
+            active_sources.push_back(std::make_unique<x86_energy::AccessSource>(std::move(source)));
             break;
         }
         catch (std::exception& e)
@@ -113,13 +113,12 @@ x86_energy_sync_plugin::x86_energy_sync_plugin()
         }
     }
 
-    if (!active_source)
+    if (active_sources.empty())
     {
         logging::fatal()
             << "Failed to initialize any available source. x86_energy values won't be available.";
         throw std::runtime_error("Failed to initialize x86_energy access source.");
     }
-    logging::info() << "Using x86_energy access source: " << active_source->name();
 }
 
 /**
@@ -328,39 +327,58 @@ x86_energy_sync_plugin::get_metric_properties(const std::string& name)
         for (auto index = 0; index < architecture_.size(granularity); index++)
         {
             std::vector<x86_energy::SourceCounter> tmp_vec;
-            tmp_vec.emplace_back(active_source->get(counter, index));
-            auto& handle = make_handle(metric_name, metric_name, metric_name, std::move(tmp_vec),
-                                       std::string("E"), false, 0);
-            auto metric = scorep::plugin::metric_property(metric_name, " Energy Consumption", "J")
-                              .accumulated_last()
-                              .value_int()
-                              .decimal()
-                              .value_exponent(-3);
-            if (counter == x86_energy::Counter::PCKG || counter == x86_energy::Counter::DRAM)
+            for (auto& active_source : active_sources)
             {
-                blade_sources.emplace_back(active_source->get(counter, index));
-            }
+                logging::debug() << "try source: " << active_source->name();
+                try
+                {
+                    tmp_vec.emplace_back(active_source->get(counter, index));
+                    auto& handle = make_handle(metric_name, metric_name, metric_name,
+                                               std::move(tmp_vec), std::string("E"), false, 0);
+                    auto metric =
+                        scorep::plugin::metric_property(metric_name, " Energy Consumption", "J")
+                            .accumulated_last()
+                            .value_int()
+                            .decimal()
+                            .value_exponent(-3);
+                    properties.push_back(metric);
 
-            properties.push_back(metric);
+                    if (counter == x86_energy::Counter::PCKG ||
+                        counter == x86_energy::Counter::DRAM)
+                    {
+                        blade_sources.emplace_back(active_source->get(counter, index));
+                    }
+                    break;
+                }
+                catch (std::runtime_error& e)
+                {
+                    logging::error() << "Could not access source: " << active_source->name()
+                                     << " Reason : " << e.what();
+                }
+            }
         }
     }
 
-    /** TODO check wie BLADE heist
-     *
-     */
+    if (!blade_sources.empty())
+    {
+        double offset = stod(scorep::environment_variable::get("OFFSET", "70000.0"));
+        logging::info("X86_ENERGY_SYNC_PLUGIN") << "set offset to " << offset << "mW";
 
-    double offset = stod(scorep::environment_variable::get("OFFSET", "70000.0"));
-    logging::info("X86_ENERGY_SYNC_PLUGIN") << "set offset to " << offset << "mW";
+        std::string metric_name = "x86_energy/BLADE/E";
+        auto& handle = make_handle(metric_name, metric_name, metric_name, std::move(blade_sources),
+                                   std::string("E"), true, offset);
+        auto metric = scorep::plugin::metric_property(metric_name, " Energy Consumption", "J")
+                          .accumulated_last()
+                          .value_int()
+                          .decimal()
+                          .value_exponent(-3);
+        properties.push_back(metric);
+    }
 
-    std::string metric_name = "x86_energy/BLADE/E";
-    auto& handle = make_handle(metric_name, metric_name, metric_name, std::move(blade_sources),
-                               std::string("E"), true, offset);
-    auto metric = scorep::plugin::metric_property(metric_name, " Energy Consumption", "J")
-                      .accumulated_last()
-                      .value_int()
-                      .decimal()
-                      .value_exponent(-3);
-
+    if (properties.empty())
+    {
+        logging::fatal() << "Did not add any property!";
+    }
     return properties;
 }
 
