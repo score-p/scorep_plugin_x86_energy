@@ -101,9 +101,8 @@ x86_energy_sync_plugin::x86_energy_sync_plugin()
         try
         {
             source.init();
-
+            logging::debug() << "Add Source: " << source.name();
             active_sources.push_back(std::make_unique<x86_energy::AccessSource>(std::move(source)));
-            break;
         }
         catch (std::exception& e)
         {
