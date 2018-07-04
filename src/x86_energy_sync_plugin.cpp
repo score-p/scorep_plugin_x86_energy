@@ -328,7 +328,8 @@ x86_energy_sync_plugin::get_metric_properties(const std::string& name)
             std::vector<x86_energy::SourceCounter> tmp_vec;
             for (auto& active_source : active_sources)
             {
-                logging::debug() << "try source: " << active_source->name();
+                logging::debug() << "try source: " << active_source->name()
+                                 << " for granularity: " << index;
                 try
                 {
                     tmp_vec.emplace_back(active_source->get(counter, index));
