@@ -38,11 +38,6 @@ public:
     /* move assignment */
     x86_energy_metric& operator=(x86_energy_metric&&) = default;
 
-    double first = -1;
-    double acct = 0;
-    double diff = 0;
-    double last = 0;
-
     /* getter functions */
     std::string name() const
     {
@@ -81,6 +76,11 @@ public:
         return mquantity;
     }
 
+    bool operator==(const x86_energy_metric& b) const
+    {
+        return this->mfull_name == b.mfull_name;
+    }
+
 private:
     std::string mfull_name;
     std::string mname;                              /*<sensor is the ident number of x86_energy */
@@ -94,13 +94,22 @@ private:
 };
 
 /** operator to print the metric handle
- *
- *
- **/
-std::ostream& operator<<(std::ostream& s, const x86_energy_metric& metric)
+ */
+inline std::ostream& operator<<(std::ostream& s, const x86_energy_metric& metric)
 {
     s << "(" << metric.full_name() << ")";
     return s;
 }
+
+/** hashing using the metric name
+ */
+template <>
+struct std::hash<x86_energy_metric>
+{
+    size_t inline operator()(const x86_energy_metric& metric) const
+    {
+        return std::hash<std::string>{}(metric.full_name());
+    }
+};
 
 #endif /* INCLUDE_X86_ENERGY_METRIC_HPP_ */

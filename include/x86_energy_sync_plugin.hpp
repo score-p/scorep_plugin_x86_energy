@@ -44,20 +44,12 @@ private:
 
     x86_energy::Mechanism mechanism;
     std::vector<std::unique_ptr<x86_energy::AccessSource>> active_sources;
+    x86_energy::Architecture architecture; /**< Architecture tree, e.g. SYSTEM->PKG->...*/
 
-    x86_energy::Architecture architecture_; /**< Architecture tree, e.g. SYSTEM->PKG->...*/
-
-    std::map<std::string, bool> already_saved_metrics;
-
-    const std::string prefix_ = "x86_energy/";
+    const std::string prefix_ = "x86_energy/"; /**< TODO reimplement **/
     std::string hostname;
     bool is_resposible = false;
     pid_t responsible_thread = -1;
-
-    std::chrono::milliseconds reading_time; /*< minimal time beetween to sensor readings to get a
-                                               value unequal zero */
-    long int invalid_result_count = 0;
-    long int valid_result_count = 0;
 };
 
 #endif /* INCLUDE_X86_ENERGY_SYNC_PLUGIN_HPP_ */

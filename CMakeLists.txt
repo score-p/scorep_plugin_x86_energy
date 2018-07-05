@@ -6,17 +6,29 @@ option(ENABLE_MPI "Build with MPI support." ON)
 add_subdirectory(extern)
 
 # x86_energy_sync_plugin
-add_library(x86_energy_sync_plugin SHARED src/x86_energy_sync_plugin.cpp)
+
+set(X86_ENERGY_PLUGIN_SYNC_SRC
+    src/x86_energy_sync_plugin.cpp
+    )
+
+
+add_library(x86_energy_sync_plugin SHARED ${X86_ENERGY_PLUGIN_SYNC_SRC})
 target_compile_features(x86_energy_sync_plugin PUBLIC cxx_std_14)
 target_link_libraries(x86_energy_sync_plugin PUBLIC scorep-plugin-cxx x86_energy::x86_energy_cxx)
 target_include_directories(x86_energy_sync_plugin PUBLIC include)
 
 
 # x86_energy_plugin
-# add_library(x86_energy_plugin SHARED x86_energy_plugin)
-# target_compile_features(x86_energy_plugin PUBLIC cxx_std_14)
-# target_link_libraries(x86_energy_plugin PUBLIC scorep-plugin-cxx x86_energy::x86_energy_cxx)
-# target_include_directories(x86_energy_plugin PUBLIC include)
+
+set(X86_ENERGY_PLUGIN_SRC
+    src/x86_energy_measurement_thread.cpp
+    src/x86_energy_plugin.cpp
+    )
+
+add_library(x86_energy_plugin SHARED ${X86_ENERGY_PLUGIN_SRC})
+target_compile_features(x86_energy_plugin PUBLIC cxx_std_14)
+target_link_libraries(x86_energy_plugin PUBLIC scorep-plugin-cxx x86_energy::x86_energy_cxx)
+target_include_directories(x86_energy_plugin PUBLIC include)
 
 find_package(MPI)
 
@@ -35,5 +47,5 @@ endif()
 
 install(TARGETS x86_energy_sync_plugin
     LIBRARY DESTINATION lib)
-#install(TARGETS x86_energy_plugin 
-#    LIBRARY DESTINATION lib)
+install(TARGETS x86_energy_plugin 
+    LIBRARY DESTINATION lib)

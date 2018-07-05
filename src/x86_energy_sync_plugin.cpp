@@ -40,10 +40,7 @@
 #include <mpi.h>
 #endif
 
-#include <scorep/plugin/util/matcher.hpp>
-
 #include <x86_energy.hpp>
-
 #include <x86_energy_sync_plugin.hpp>
 
 using scorep::plugin::logging;
@@ -87,11 +84,6 @@ x86_energy_sync_plugin::x86_energy_sync_plugin()
     }
     this->hostname = std::string(c_hostname);
 
-    reading_time = static_cast<std::chrono::milliseconds>(
-        stoi(scorep::environment_variable::get("READING_TIME", "0")));
-    logging::info("X86_ENERGY_SYNC_PLUGIN")
-        << "set minimum reading time to " << reading_time.count() << "ms";
-
     logging::debug("X86_ENERGY_SYNC_PLUGIN") << "Using x86_energy mechanism: " << mechanism.name();
 
     auto sources = mechanism.available_sources();
@@ -127,17 +119,6 @@ x86_energy_sync_plugin::x86_energy_sync_plugin()
  */
 x86_energy_sync_plugin::~x86_energy_sync_plugin()
 {
-    pid_t ptid = syscall(SYS_gettid);
-    if (this->is_resposible && (this->responsible_thread == ptid))
-    {
-        if (invalid_result_count > 0)
-        {
-            logging::warn() << "got " << invalid_result_count
-                            << " invalid results at host: " << this->hostname;
-            logging::warn() << "and " << valid_result_count
-                            << " valid results at host: " << this->hostname;
-        }
-    }
     logging::debug() << "plugin sucessfull finalized";
 }
 
@@ -323,7 +304,7 @@ x86_energy_sync_plugin::get_metric_properties(const std::string& name)
 
         std::string metric_name = str.str();
 
-        for (auto index = 0; index < architecture_.size(granularity); index++)
+        for (auto index = 0; index < architecture.size(granularity); index++)
         {
             std::vector<x86_energy::SourceCounter> tmp_vec;
             for (auto& active_source : active_sources)
@@ -352,8 +333,8 @@ x86_energy_sync_plugin::get_metric_properties(const std::string& name)
                 }
                 catch (std::runtime_error& e)
                 {
-                    logging::error() << "Could not access source: " << active_source->name()
-                                     << " for granularity: " << index << " Reason : " << e.what();
+                    logging::warn() << "Could not access source: " << active_source->name()
+                                    << " for granularity: " << index << " Reason : " << e.what();
                 }
             }
         }

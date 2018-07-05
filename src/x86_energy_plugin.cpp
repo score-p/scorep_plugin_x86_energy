@@ -26,7 +26,6 @@
  */
 
 #include <scorep/plugin/plugin.hpp>
-#include <scorep/plugin/util/matcher.hpp>
 
 #include <climits>
 #include <ctime>
@@ -45,531 +44,165 @@
 
 #include <ratio>
 
-extern "C" {
-#include <unistd.h>
-#include <x86_energy.h>
-}
+#include <x86_energy_plugin.hpp>
 
-#include <x86_energy_metric.hpp>
-
-using namespace scorep::plugin::policy;
-
-using scorep::plugin::logging;
-
-// Must be system clock for real epoch!
-using local_clock = std::chrono::system_clock;
-
-template <typename T>
-static double chrono_to_millis(T duration)
+x86_energy_plugin::x86_energy_plugin()
+: x86_energy_m(
+      std::chrono::microseconds(stoi(scorep::environment_variable::get("intervall_us", "50000"))))
 {
-    return std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(duration).count();
-}
-/**
- * like hdeem but for x86_energy and better
- *
- **/
+    logging::debug("X86_ENERGY_SYNC_PLUGIN") << "Using x86_energy mechanism: " << mechanism.name();
 
-class x86_energy_measurement
-{
-public:
-    x86_energy_measurement()
-    /* setting default value for intervall_us */
-    : mintervall_us(std::chrono::microseconds(50000)), is_thread(0)
+    auto sources = mechanism.available_sources();
+
+    for (auto& source : sources)
     {
-        /* setting correct pointer for x86_energy */
-        /* source = get_available_sources_nothread(); */
-        source = get_available_sources();
-        /* test if the the given source is valid */
-        if (source == nullptr)
-        {
-            logging::error() << "x86_energy source is not available -> Throw system_error";
-            std::error_code ec(EFAULT, std::system_category());
-            throw std::system_error(ec, "x86_energy is not usable");
-        }
-
-        /* get system specific numbers */
-        mnr_packages = source->get_nr_packages();
-        logging::info() << "Number of nodes is " << mnr_packages;
-        mfeatures = source->plattform_features->num;
-        logging::info() << "Number of features is " << mfeatures;
-    }
-
-    const auto& get_readings() const
-    {
-        return readings;
-    }
-
-    int features() const
-    {
-        return mfeatures;
-    }
-
-    int nr_packages() const
-    {
-        return mnr_packages;
-    }
-
-    std::string name(int index) const
-    {
-        if (index < 0 or index >= mfeatures)
-            throw std::runtime_error("Index is out of range.");
-        return source->plattform_features->name[index];
-    }
-
-    int ident(int index) const
-    {
-        if (index < 0 or index >= mfeatures)
-            throw std::runtime_error("Index is out of range.");
-        return source->plattform_features->ident[index];
-    }
-
-    void set_intervall_us(std::chrono::microseconds intervall_us)
-    {
-        if (intervall_us <= std::chrono::microseconds(0))
-        {
-            logging::info() << "Time ntervall is with " << intervall_us.count()
-                            << "us to low. Use default value with " << mintervall_us.count()
-                            << "us";
-        }
-        else
-        {
-            logging::info() << "Set minimum time intervall to " << intervall_us.count() << "us";
-            mintervall_us = intervall_us;
-        }
-    }
-
-    void start()
-    {
-        logging::debug() << "start thread";
-        /* from http://stackoverflow.com/a/32206983 */
-        m_stop = false;
-        if (is_thread == 0)
-        {
-            is_thread = 1;
-            m_thread = std::thread(&x86_energy_measurement::measurement, this);
-        }
-    }
-
-    void stop()
-    {
-        if (m_stop == true)
-        {
-            logging::debug() << "already stopped, do nothing";
-            return;
-        }
-
-        logging::debug() << "stop thread";
-        /* work also without curly brackets? */
-        {
-            std::lock_guard<std::mutex> lock(m_mutex);
-            m_stop = true;
-        }
-        m_cond.notify_one();
-        m_thread.join();
-        logging::debug() << "successfully stopped";
-    }
-
-private:
-    void measurement()
-    {
-        /* init x86_energy at the beginning */
-        for (int i = 0; i < mnr_packages; i++)
-            source->init_device(i);
-
-        std::unique_lock<std::mutex> lock(m_mutex);
-        while (!m_stop)
-        {
-            read();
-            m_cond.wait_for(lock, mintervall_us);
-            /* std::this_thread::sleep_for(mintervall_us); */
-        }
-
-        /* fini x86_energy at the end */
-        for (int i = 0; i < mnr_packages; i++)
-            source->fini_device(i);
-    }
-
-    void read()
-    {
-        /* read and save the sensor values */
-        for (int i = 0; i < mnr_packages; i++)
-        {
-            for (int j = 0; j < mfeatures; j++)
-            {
-                /* save sensor results in map with key sensor_name +
-                 * package_number + quantity
-                 * sensor_name is used from x86_energy
-                 * save energy and power, select later, simpler */
-                /* energy */
-                readings[name(j) + std::to_string(i) + "E"].push_back(
-                    source->get_energy(i, ident(j)));
-                /* power */
-                readings[name(j) + std::to_string(i) + "P"].push_back(
-                    source->get_power(i, ident(j)));
-            }
-        }
-    }
-
-    /* x86_energy stuff */
-    int mnr_packages;
-    int mfeatures;
-    struct x86_energy_source* source;
-    std::map<std::string, std::vector<double>> readings;
-
-    /* thread stuff */
-    /* minimal time beetween to sensor readings to get a value unequal zero */
-    std::chrono::microseconds mintervall_us;
-    std::thread m_thread;
-    std::mutex m_mutex;
-    std::condition_variable m_cond;
-    bool m_stop;
-    bool is_thread;
-};
-
-template <typename P, typename Policies>
-using x86_energy_object_id = object_id<x86_energy_metric, P, Policies>;
-
-class x86_energy_plugin
-    : public scorep::plugin::base<x86_energy_plugin, async, per_host, post_mortem, scorep_clock,
-                                  x86_energy_object_id>
-{
-public:
-    x86_energy_plugin()
-    {
-        /* get environment */
-        offset = stod(scorep::environment_variable::get("OFFSET", "70000.0"));
-        logging::info() << "set offset to " << offset << "mW";
-
-        /* get intervall_us and cast it in the right way */
-        auto intervall_us = static_cast<std::chrono::microseconds>(
-            stoi(scorep::environment_variable::get("intervall_us", "50000")));
-        logging::info() << "set time intervall between to measuring points to "
-                        << intervall_us.count() << "us";
-
-        /* set the correct interval for the measurement */
-        x86_energy.set_intervall_us(intervall_us);
-    }
-
-public:
-    void add_metric(x86_energy_metric& handle)
-    {
-        // We actually don't need to do a thing! :-)
-    }
-
-    void start()
-    {
-        assert(!stopped);
-        if (started)
-        {
-            return;
-        }
-
-        local_start = local_clock::now();
-        convert.synchronize_point();
-
-        x86_energy.start();
-
-        started = true;
-        logging::info() << "Successfully started x86_energy measurement.";
-    }
-
-    void stop()
-    {
-        if (!started)
-        {
-            logging::warn() << "Trying to stop without being started.";
-            return;
-        }
-        if (stopped)
-        {
-            return;
-        }
-
-        /* time measurement and conversion between time and scorep ticks */
-        convert.synchronize_point();
-        stopped = true;
-
         try
         {
-            x86_energy.stop();
+            source.init();
+            logging::debug() << "Add Source: " << source.name();
+            active_sources.push_back(std::make_unique<x86_energy::AccessSource>(std::move(source)));
         }
-        catch (std::exception& ex)
+        catch (std::exception& e)
         {
-            logging::error() << "X86_Energy could not stop: " << ex.what();
+            logging::info("X86_ENERGY_SYNC_PLUGIN")
+                << "Failed to initialize access source: " << source.name()
+                << " error was: " << e.what();
         }
-
-        auto tp_after_stop = local_clock::now();
-        readings = x86_energy.get_readings();
-        /* all vectors have the same length */
-        if (readings.empty() == true)
-            readings_size = 0;
-        else
-            readings_size = readings.begin()->second.size();
-
-        logging::info() << "Successfully stopped x86_energy measurement and retrieved "
-                        << readings_size << " values"
-                        << " in " << chrono_to_millis(local_clock::now() - tp_after_stop) << " ms.";
-        logging::debug() << "Duration of measurement: " << chrono_to_millis(convert.duration())
-                         << " ms";
     }
 
-    void synchronize(bool is_responsible, SCOREP_MetricSynchronizationMode sync_mode)
+    if (active_sources.empty())
     {
-        logging::debug() << "Synchronize " << is_responsible << ", " << sync_mode;
+        logging::fatal()
+            << "Failed to initialize any available source. x86_energy values won't be available.";
+        throw std::runtime_error("Failed to initialize x86_energy access source.");
     }
+}
 
-    template <typename C>
-    void get_all_values(x86_energy_metric& handle, C& cursor)
+void x86_energy_plugin::add_metric(x86_energy_metric& handle)
+{
+    // We actually don't need to do a thing! :-)
+}
+
+void x86_energy_plugin::start()
+{
+    x86_energy_thread =
+        std::thread(&x86_energy_measurement_thread::measurment, std::ref(x86_energy_m));
+
+    logging::info() << "Successfully started x86_energy measurement.";
+}
+
+void x86_energy_plugin::stop()
+{
+    x86_energy_m.stop_measurment();
+    if (x86_energy_thread.joinable())
     {
-        /* stop(); // Should be already called, but just to be sure. */
-        auto tp_start = local_clock::now();
-        if (!stopped)
+        x86_energy_thread.join();
+    }
+}
+
+void x86_energy_plugin::synchronize(bool is_responsible, SCOREP_MetricSynchronizationMode sync_mode)
+{
+}
+
+std::vector<scorep::plugin::metric_property>
+x86_energy_plugin::get_metric_properties(const std::string& name)
+{
+    std::vector<scorep::plugin::metric_property> properties;
+    std::vector<x86_energy::SourceCounter> blade_sources;
+    std::vector<std::reference_wrapper<x86_energy_metric>> handles;
+
+    for (int i = 0; i < static_cast<int>(x86_energy::Counter::SIZE); i++)
+    {
+        auto counter = static_cast<x86_energy::Counter>(i);
+        auto granularity = mechanism.granularity(counter);
+
+        if (granularity == x86_energy::Granularity::SIZE)
         {
-            throw std::runtime_error("Could not stop x86_energy measurement to get values.");
+            logging::debug() << "Counter is not available: " << counter << " (Skipping)";
+
+            continue;
         }
-        if (readings.empty())
+
+        std::stringstream str;
+        str << mechanism.name() << " " << counter;
+
+        std::string metric_name = str.str();
+
+        for (auto index = 0; index < architecture.size(granularity); index++)
         {
-            logging::error() << "No x86_energy readings available.";
-            return;
-        }
-
-        /* converting sensor name to lower case */
-        auto sensor_name = handle.name();
-        std::transform(sensor_name.begin(), sensor_name.end(), sensor_name.begin(), ::tolower);
-        /* only for real sensors exist the map entry
-         * but also key values that didn't exist are accessible
-         * use lower case keys because of the performance in the measure
-         * thread*/
-        auto sensor_data = readings[sensor_name + handle.quantity()];
-
-        local_clock::duration duration_actual(convert.duration());
-
-        // We must use double here to avoid too much precision loss e.g. from integers in
-        // microseconds
-        const double sampling_period = static_cast<double>(duration_actual.count()) / readings_size;
-
-        logging::trace() << "Using effective sampling period of " << sampling_period
-                         << " sysclock ticks (usually us)";
-
-        const auto index_to_scorep_ticks =
-            [ sampling_period, start = local_start, converter = convert ](size_t index)
-        {
-            return converter.to_ticks(
-                start + local_clock::duration(static_cast<int64_t>(sampling_period * index)));
-        };
-
-        logging::trace() << "Reading " << readings_size << " values from sensor " << handle.name();
-        cursor.resize(readings_size);
-
-        double value = 0;
-        const double sampling_period_secs =
-            std::chrono::duration_cast<std::chrono::duration<double>>(duration_actual).count() /
-            readings_size;
-        /* start calculation and filling of the cursor */
-        for (int i = 0; i < readings_size; i++)
-        {
-            if (handle.name() != "BLADE")
+            std::vector<x86_energy::SourceCounter> tmp_vec;
+            for (auto& active_source : active_sources)
             {
-                /* scale the results with the first measured value */
-                value = sensor_data[i] - sensor_data[0];
-            }
-            else
-            {
-                if (handle.quantity() == "E")
+                logging::debug() << "try source: " << active_source->name()
+                                 << " for granularity: " << index;
+                try
                 {
-                    /* for energy the offset power has to be multiplied with
-                     * the time
-                     * the time is casted to seconds*/
-                    value = offset / 1000 * sampling_period_secs * i;
-                }
-                else if (handle.quantity() == "P")
-                {
-                    /* and for power the offset has to be simply added */
-                    value = offset / 1000;
-                }
+                    tmp_vec.emplace_back(active_source->get(counter, index));
+                    auto& handle = make_handle(metric_name, metric_name, metric_name,
+                                               std::move(tmp_vec), std::string("E"), false, 0);
 
-                for (auto point : readings)
-                {
-                    /* only add if the sensor name didn't contain core
-                     * or one number is negative (for blade)
-                     * and if the quantity of the blade matches*/
-                    if (point.first.find("core") == std::string::npos and
-                        point.first.find("blade") == std::string::npos and
-                        // use pointer because of operator== from
-                        // string
-                        &point.first.back() == handle.quantity())
+                    auto metric =
+                        scorep::plugin::metric_property(metric_name, " Energy Consumption", "J")
+                            .accumulated_last()
+                            .value_double()
+                            .decimal();
+
+                    properties.push_back(metric);
+                    handles.push_back(handle);
+
+                    if (counter == x86_energy::Counter::PCKG ||
+                        counter == x86_energy::Counter::DRAM)
                     {
-                        value += (point.second[i] - point.second[0]);
+                        blade_sources.emplace_back(active_source->get(counter, index));
                     }
+                    break;
                 }
-            }
-
-            /* 1000 because the values from rapl are in W or J and has to
-             * be in mW or mJ */
-            cursor.store(index_to_scorep_ticks(i), (int64_t)(value * 1000));
-        }
-        if (cursor.size() == 0)
-        {
-            logging::warn() << "no valid measurements are in the time range. Total measurements: "
-                            << readings_size;
-        }
-        logging::debug() << "get_all_values wrote " << readings_size << " values (out of which "
-                         << cursor.size() << " are in the valid time range) in "
-                         << chrono_to_millis(local_clock::now() - tp_start) << " ms.";
-    }
-
-    /**
-     * Convert a named metric (may contain wildcards or so) to a vector of
-     * actual metrics (may have a different name)
-     *
-     * NOTE: Adds the metrics. Currently available metrics are depend on the
-     * current system. In RAPL you can found the following possible ones
-     *
-     *  * package
-     *  * core
-     *  * gpu
-     *  * dram
-     *  * dram_ch0
-     *  * dram_ch1
-     *  * dram_ch2
-     *  * dram_ch3
-     *
-     *  Wildcards are allowed.
-     *  The metrics will be changed to upper case letters and the number ot the
-     *  package will be added at the end of the name
-     */
-    std::vector<scorep::plugin::metric_property> get_metric_properties(const std::string& name)
-    {
-        std::string metric_name(name);
-        logging::debug() << "get_event_info called";
-        logging::debug() << "metrics name: " << name;
-        std::vector<scorep::plugin::metric_property> properties;
-
-        /* Allow the user to prefix the metric with x86_energy/ or not.
-         * In the trace it will always be full_name with
-         * x86_energy/[COREi, PACKAGEi, GPUi] */
-        auto pos_prefix = metric_name.find(prefix_);
-        if (pos_prefix == 0)
-        {
-            metric_name = metric_name.substr(prefix_.length());
-        }
-
-        /* compatible with old plugin interface */
-        auto pos_quantity = metric_name.find("/");
-        auto pos_quantity_old = metric_name.find_last_of("_");
-        std::string quantity;
-        if (metric_name.substr(pos_quantity_old + 1) == "power")
-        {
-            logging::warn() << "use old interface for quantity";
-            quantity = "P";
-            metric_name.erase(pos_quantity_old);
-        }
-        else if (metric_name.substr(pos_quantity_old + 1) == "energy")
-        {
-            logging::warn() << "use old interface for quantity";
-            quantity = "E";
-            metric_name.erase(pos_quantity_old);
-        }
-        else if (pos_quantity == std::string::npos)
-        {
-            logging::warn() << "no physical quantity found using Energy";
-            quantity = "E";
-        }
-        else
-        {
-            quantity = metric_name.substr(pos_quantity + 1);
-            metric_name.erase(pos_quantity);
-        }
-
-        /* also match metric name core for core0 and core1 */
-        scorep::plugin::util::matcher match(metric_name + "*");
-        for (int i = 0; i < x86_energy.nr_packages(); i++)
-        {
-            for (int j = 0; j < x86_energy.features(); j++)
-            {
-                std::string sensor_name(x86_energy.name(j) + std::to_string(i));
-                /* converting sensor name to upper case */
-                std::transform(sensor_name.begin(), sensor_name.end(), sensor_name.begin(),
-                               ::toupper);
-                logging::debug() << "found sensor: " << sensor_name;
-                logging::debug() << match(sensor_name);
-                ;
-
-                if (match(sensor_name))
+                catch (std::runtime_error& e)
                 {
-                    properties.push_back(
-                        add_metric_property(sensor_name, x86_energy.ident(j), i, quantity));
+                    logging::warn() << "Could not access source: " << active_source->name()
+                                    << " for granularity: " << index << " Reason : " << e.what();
                 }
             }
         }
-
-        /* add blade counter if claimed */
-        if (metric_name.find("BLADE") != std::string::npos or
-            metric_name.find("blade") != std::string::npos)
-        {
-            /* rapl has no member blade */
-            logging::debug() << "add virtual sensor: BLADE";
-            properties.push_back(add_metric_property("BLADE", -1, -1, quantity));
-        }
-
-        if (properties.empty())
-        {
-            logging::fatal() << "No metrics added. Check your metrics!";
-        }
-
-        logging::debug() << "get_event_info(" << metric_name << ") Quantity: " << quantity
-                         << " returning " << properties.size() << " properties";
-
-        return properties;
     }
 
-private:
-    const std::string prefix_ = "x86_energy/";
-    scorep::plugin::metric_property add_metric_property(const std::string& name, int sensor,
-                                                        int node, const std::string& quantity)
+    if (!blade_sources.empty())
     {
-        const std::string full_name = prefix_ + name + std::string("/") + quantity;
-        std::string description;
+        double offset = stod(scorep::environment_variable::get("OFFSET", "70.0"));
+        logging::info("X86_ENERGY_SYNC_PLUGIN") << "set offset to " << offset << "W";
 
-        auto& handle = make_handle(full_name, full_name, name, sensor, node, quantity);
-        logging::trace() << "registered handle: " << handle;
-        if (quantity == "E")
-        {
-            /* accumulated_last() like in the hdeem plugin
-             * with accumulated_start() you will get very high negative results */
-            return scorep::plugin::metric_property(full_name, " Energy Consumption", "J")
-                .accumulated_last()
-                .value_int()
-                .decimal()
-                .value_exponent(-3);
-        }
-        else if (quantity == "P")
-        {
-            return scorep::plugin::metric_property(full_name, " Power Consumption", "W")
-                .absolute_last()
-                .value_int()
-                .decimal()
-                .value_exponent(-3);
-        }
-        else
-        {
-            return scorep::plugin::metric_property(full_name, " Unknown quantity", quantity)
-                .absolute_point()
-                .value_int();
-        }
+        std::string metric_name = "x86_energy/BLADE/E";
+        auto& handle = make_handle(metric_name, metric_name, metric_name, std::move(blade_sources),
+                                   std::string("E"), true, offset);
+        auto metric = scorep::plugin::metric_property(metric_name, " Energy Consumption", "J")
+                          .accumulated_last()
+                          .value_double()
+                          .decimal();
+        properties.push_back(metric);
+        handles.push_back(handle);
     }
 
-    std::chrono::time_point<local_clock> local_start;
-    scorep::chrono::time_convert<> convert;
+    if (properties.empty())
+    {
+        logging::fatal() << "Did not add any property!";
+    }
+    x86_energy_m.add_handles(handles);
 
-    x86_energy_measurement x86_energy;
-    bool started = false;
-    bool stopped = false;
-    std::map<std::string, std::vector<double>> readings;
-    int readings_size;
+    return properties;
+}
 
-    /* offset for network cardes and so on in the blade */
-    double offset;
-};
+template <typename C>
+void x86_energy_plugin::get_all_values(x86_energy_metric& handle, C& cursor)
+{
+
+    auto values = x86_energy_m.get_readings(handle);
+    for (auto& value : values)
+    {
+        cursor.write(value);
+    }
+
+    logging::debug() << "get_all_values wrote " << values.size() << " values (out of which "
+                     << cursor.size() << " are in the valid time range)";
+}
 
 SCOREP_METRIC_PLUGIN_CLASS(x86_energy_plugin, "x86_energy")
