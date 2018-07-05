@@ -24,7 +24,7 @@ class x86_energy_measurement_thread
 {
 public:
     x86_energy_measurement_thread(std::chrono::microseconds intervall_);
-    void add_handles(std::vector<std::reference_wrapper<x86_energy_metric>> handles);
+    void add_handles(const std::vector<x86_energy_metric>& handles);
     std::vector<std::pair<scorep::chrono::ticks, double>> get_readings(x86_energy_metric& handle);
     void measurment();
     void stop_measurment();

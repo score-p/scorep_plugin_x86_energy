@@ -5,6 +5,9 @@ option(ENABLE_MPI "Build with MPI support." ON)
 
 add_subdirectory(extern)
 
+set(THREADS_PREFER_PTHREAD_FLAG true)
+find_package(Threads REQUIRED)
+
 # x86_energy_sync_plugin
 
 set(X86_ENERGY_PLUGIN_SYNC_SRC
@@ -27,7 +30,7 @@ set(X86_ENERGY_PLUGIN_SRC
 
 add_library(x86_energy_plugin SHARED ${X86_ENERGY_PLUGIN_SRC})
 target_compile_features(x86_energy_plugin PUBLIC cxx_std_14)
-target_link_libraries(x86_energy_plugin PUBLIC scorep-plugin-cxx x86_energy::x86_energy_cxx)
+target_link_libraries(x86_energy_plugin PUBLIC scorep-plugin-cxx x86_energy::x86_energy_cxx Threads::Threads)
 target_include_directories(x86_energy_plugin PUBLIC include)
 
 find_package(MPI)

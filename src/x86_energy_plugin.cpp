@@ -48,7 +48,7 @@
 
 x86_energy_plugin::x86_energy_plugin()
 : x86_energy_m(
-      std::chrono::microseconds(stoi(scorep::environment_variable::get("intervall_us", "50000"))))
+      std::chrono::microseconds(stoi(scorep::environment_variable::get("interval_us", "50000"))))
 {
     logging::debug("X86_ENERGY_SYNC_PLUGIN") << "Using x86_energy mechanism: " << mechanism.name();
 
@@ -85,8 +85,8 @@ void x86_energy_plugin::add_metric(x86_energy_metric& handle)
 
 void x86_energy_plugin::start()
 {
-    x86_energy_thread =
-        std::thread(&x86_energy_measurement_thread::measurment, std::ref(x86_energy_m));
+
+    x86_energy_thread = std::thread([this]() { this->x86_energy_m.measurment(); });
 
     logging::info() << "Successfully started x86_energy measurement.";
 }
@@ -109,7 +109,6 @@ x86_energy_plugin::get_metric_properties(const std::string& name)
 {
     std::vector<scorep::plugin::metric_property> properties;
     std::vector<x86_energy::SourceCounter> blade_sources;
-    std::vector<std::reference_wrapper<x86_energy_metric>> handles;
 
     for (int i = 0; i < static_cast<int>(x86_energy::Counter::SIZE); i++)
     {
@@ -148,7 +147,6 @@ x86_energy_plugin::get_metric_properties(const std::string& name)
                             .decimal();
 
                     properties.push_back(metric);
-                    handles.push_back(handle);
 
                     if (counter == x86_energy::Counter::PCKG ||
                         counter == x86_energy::Counter::DRAM)
@@ -179,14 +177,13 @@ x86_energy_plugin::get_metric_properties(const std::string& name)
                           .value_double()
                           .decimal();
         properties.push_back(metric);
-        handles.push_back(handle);
     }
 
     if (properties.empty())
     {
         logging::fatal() << "Did not add any property!";
     }
-    x86_energy_m.add_handles(handles);
+    x86_energy_m.add_handles(get_handles());
 
     return properties;
 }
