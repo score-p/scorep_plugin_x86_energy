@@ -93,23 +93,27 @@ private:
     std::chrono::time_point<std::chrono::steady_clock> first_measurement;
 };
 
-/** operator to print the metric handle
- */
-inline std::ostream& operator<<(std::ostream& s, const x86_energy_metric& metric)
-{
-    s << "(" << metric.full_name() << ")";
-    return s;
-}
 
-/** hashing using the metric name
- */
-template <>
-struct std::hash<x86_energy_metric>
+namespace std
 {
-    size_t inline operator()(const x86_energy_metric& metric) const
+    /** operator to print the metric handle
+     */
+    inline ostream& operator<<(ostream& s, const x86_energy_metric& metric)
     {
-        return std::hash<std::string>{}(metric.full_name());
+        s << "(" << metric.full_name() << ")";
+        return s;
     }
+
+    /** hashing using the metric name
+     */
+    template <>
+    struct hash<x86_energy_metric>
+    {
+        size_t inline operator()(const x86_energy_metric& metric) const
+        {
+            return std::hash<std::string>{}(metric.full_name());
+        }
+    };
 };
 
 #endif /* INCLUDE_X86_ENERGY_METRIC_HPP_ */

@@ -5,6 +5,8 @@ option(ENABLE_MPI "Build with MPI support." ON)
 
 add_subdirectory(extern)
 
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 set(THREADS_PREFER_PTHREAD_FLAG true)
 find_package(Threads REQUIRED)
 
