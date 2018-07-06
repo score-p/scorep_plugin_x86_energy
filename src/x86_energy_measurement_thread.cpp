@@ -25,11 +25,11 @@ void x86_energy_measurement_thread::measurment()
 {
     stop = false;
 
-    std::lock_guard<std::mutex> lock(m_mutex);
     while (!stop)
     {
         try
         {
+            std::lock_guard<std::mutex> lock(m_mutex);
             for (auto& metric_it : measurments)
             {
                 auto value = metric_it.first.get().read();

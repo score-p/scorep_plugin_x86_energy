@@ -63,8 +63,8 @@ public:
             {
                 tmp = tmp +
                       offset *
-                          std::chrono::duration_cast<std::chrono::seconds>(
-                              std::chrono::steady_clock::now() - first_measurement)
+                          std::chrono::duration<double>(std::chrono::steady_clock::now() -
+                                                        first_measurement)
                               .count();
             }
         }
