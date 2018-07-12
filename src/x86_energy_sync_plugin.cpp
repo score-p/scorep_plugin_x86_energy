@@ -299,13 +299,14 @@ x86_energy_sync_plugin::get_metric_properties(const std::string& name)
             continue;
         }
 
-        std::stringstream str;
-        str << mechanism.name() << " " << counter;
-
-        std::string metric_name = str.str();
-
         for (auto index = 0; index < architecture.size(granularity); index++)
         {
+
+            std::stringstream str;
+            str << mechanism.name() << " " << counter << "[" << index <<"]";
+
+            std::string metric_name = str.str();
+
             std::vector<x86_energy::SourceCounter> tmp_vec;
             for (auto& active_source : active_sources)
             {
