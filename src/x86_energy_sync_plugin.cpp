@@ -98,7 +98,7 @@ x86_energy_sync_plugin::x86_energy_sync_plugin()
         }
         catch (std::exception& e)
         {
-            logging::info("X86_ENERGY_SYNC_PLUGIN")
+            logging::debug("X86_ENERGY_SYNC_PLUGIN")
                 << "Failed to initialize access source: " << source.name()
                 << " error was: " << e.what();
         }
@@ -303,7 +303,7 @@ x86_energy_sync_plugin::get_metric_properties(const std::string& name)
         {
 
             std::stringstream str;
-            str << mechanism.name() << " " << counter << "[" << index <<"]";
+            str << mechanism.name() << " " << counter << "[" << index << "]";
 
             std::string metric_name = str.str();
 
@@ -334,8 +334,8 @@ x86_energy_sync_plugin::get_metric_properties(const std::string& name)
                 }
                 catch (std::runtime_error& e)
                 {
-                    logging::warn() << "Could not access source: " << active_source->name()
-                                    << " for granularity: " << index << " Reason : " << e.what();
+                    logging::debug() << "Could not access source: " << active_source->name()
+                                     << " for granularity: " << index << " Reason : " << e.what();
                 }
             }
         }
@@ -359,7 +359,7 @@ x86_energy_sync_plugin::get_metric_properties(const std::string& name)
 
     if (properties.empty())
     {
-        logging::fatal() << "Did not add any property!";
+        logging::error() << "Did not add any property! There will be no measurments available.";
     }
     return properties;
 }
