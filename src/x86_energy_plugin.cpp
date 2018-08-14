@@ -122,13 +122,13 @@ x86_energy_plugin::get_metric_properties(const std::string& name)
             continue;
         }
 
-        std::stringstream str;
-        str << mechanism.name() << " " << counter;
-
-        std::string metric_name = str.str();
-
         for (auto index = 0; index < architecture.size(granularity); index++)
         {
+            std::stringstream str;
+            str << mechanism.name() << " " << counter << "[" << index << "]";
+
+            std::string metric_name = str.str();
+
             std::vector<x86_energy::SourceCounter> tmp_vec;
             for (auto& active_source : active_sources)
             {
@@ -157,8 +157,8 @@ x86_energy_plugin::get_metric_properties(const std::string& name)
                 }
                 catch (std::runtime_error& e)
                 {
-                    logging::warn() << "Could not access source: " << active_source->name()
-                                    << " for granularity: " << index << " Reason : " << e.what();
+                    logging::debug() << "Could not access source: " << active_source->name()
+                                     << " for granularity: " << index << " Reason : " << e.what();
                 }
             }
         }
@@ -181,7 +181,7 @@ x86_energy_plugin::get_metric_properties(const std::string& name)
 
     if (properties.empty())
     {
-        logging::fatal() << "Did not add any property!";
+        logging::fatal() << "Did not add any property! There will be no measurments available.";
     }
     x86_energy_m.add_handles(get_handles());
 
