@@ -315,6 +315,11 @@ x86_energy_sync_plugin::get_metric_properties(const std::string& name)
                 try
                 {
                     tmp_vec.emplace_back(active_source->get(counter, index));
+
+                    std::stringstream str;
+                    str << active_source->name() << "/" << mechanism.name() << " " << counter << "[" << index <<"]";                    
+                    std::string metric_name = str.str();
+                    
                     auto& handle = make_handle(metric_name, metric_name, metric_name,
                                                std::move(tmp_vec), std::string("E"), false, 0);
                     auto metric =
