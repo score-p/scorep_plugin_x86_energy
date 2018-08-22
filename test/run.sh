@@ -8,7 +8,7 @@ export SCOREP_METRIC_X86_ENERGY_SYNC_PLUGIN=x86_energy/BLADE/E
 #export SCOREP_METRIC_X86_ENERGY_PLUGIN=x86_energy/BLADE/E
 export SCOREP_TOTAL_MEMORY=3G
 export SCOREP_METRIC_X86_ENERGY_SYNC_PLUGIN_VERBOSE=DEBUG
-export X86_ENERGY_SOURCE="likwid-rapl"
+export X86_ENERGY_SOURCE="x86a-rapl"
 #valgrind --tool=memcheck ./test
 #gdb ./test
 #LD_DEBUG=all ./test
