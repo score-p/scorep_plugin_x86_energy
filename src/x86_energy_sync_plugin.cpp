@@ -283,6 +283,7 @@ void x86_energy_sync_plugin::synchronize(bool is_responsible,
 std::vector<scorep::plugin::metric_property>
 x86_energy_sync_plugin::get_metric_properties(const std::string& name)
 {
+    logging::debug() << "received get_metric_properties(" << name << ")";
     std::vector<scorep::plugin::metric_property> properties;
 
     std::vector<x86_energy::SourceCounter> blade_sources;
