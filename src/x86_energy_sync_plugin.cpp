@@ -285,6 +285,11 @@ x86_energy_sync_plugin::get_metric_properties(const std::string& name)
 {
     logging::debug() << "received get_metric_properties(" << name << ")";
     std::vector<scorep::plugin::metric_property> properties;
+    if (metric_properties_added)
+    {
+        logging::debug() << "Tried already to add metric properties. Do nothing.";
+        return properties;
+    }
 
     std::vector<x86_energy::SourceCounter> blade_sources;
 
@@ -318,9 +323,10 @@ x86_energy_sync_plugin::get_metric_properties(const std::string& name)
                     tmp_vec.emplace_back(active_source->get(counter, index));
 
                     std::stringstream str;
-                    str << active_source->name() << "/" << mechanism.name() << " " << counter << "[" << index <<"]";                    
+                    str << active_source->name() << "/" << mechanism.name() << " " << counter << "["
+                        << index << "]";
                     std::string metric_name = str.str();
-                    
+
                     auto& handle = make_handle(metric_name, metric_name, metric_name,
                                                std::move(tmp_vec), std::string("E"), false, 0);
                     auto metric =
@@ -367,6 +373,7 @@ x86_energy_sync_plugin::get_metric_properties(const std::string& name)
     {
         logging::error() << "Did not add any property! There will be no measurments available.";
     }
+    metric_properties_added = true;
     return properties;
 }
 

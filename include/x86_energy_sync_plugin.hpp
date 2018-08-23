@@ -22,10 +22,10 @@ using x86_energy_object_id = scorep::plugin::policy::object_id<x86_energy_metric
  * get environment
  **/
 class x86_energy_sync_plugin
-    : public scorep::plugin::base<x86_energy_sync_plugin, scorep::plugin::policy::per_thread,
-                                  scorep::plugin::policy::sync_strict,
-                                  scorep::plugin::policy::scorep_clock,
-                                  scorep::plugin::policy::synchronize, x86_energy_object_id>
+: public scorep::plugin::base<x86_energy_sync_plugin, scorep::plugin::policy::per_thread,
+                              scorep::plugin::policy::sync_strict,
+                              scorep::plugin::policy::scorep_clock,
+                              scorep::plugin::policy::synchronize, x86_energy_object_id>
 {
 public:
     x86_energy_sync_plugin();
@@ -41,6 +41,8 @@ public:
 private:
     scorep::plugin::metric_property add_metric_property(const std::string& name, int sensor,
                                                         int node, std::string& quantity);
+
+    bool metric_properties_added = false;
 
     x86_energy::Mechanism mechanism;
     std::vector<std::unique_ptr<x86_energy::AccessSource>> active_sources;
