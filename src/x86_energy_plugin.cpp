@@ -50,7 +50,7 @@ x86_energy_plugin::x86_energy_plugin()
 : x86_energy_m(
       std::chrono::microseconds(stoi(scorep::environment_variable::get("interval_us", "50000"))))
 {
-    logging::debug("X86_ENERGY_SYNC_PLUGIN") << "Using x86_energy mechanism: " << mechanism.name();
+    logging::debug("X86_ENERGY_PLUGIN") << "Using x86_energy mechanism: " << mechanism.name();
 
     auto sources = mechanism.available_sources();
 
@@ -64,7 +64,7 @@ x86_energy_plugin::x86_energy_plugin()
         }
         catch (std::exception& e)
         {
-            logging::info("X86_ENERGY_SYNC_PLUGIN")
+            logging::info("X86_ENERGY_PLUGIN")
                 << "Failed to initialize access source: " << source.name()
                 << " error was: " << e.what();
         }
@@ -167,7 +167,7 @@ x86_energy_plugin::get_metric_properties(const std::string& name)
     if (!blade_sources.empty())
     {
         double offset = stod(scorep::environment_variable::get("OFFSET", "70.0"));
-        logging::info("X86_ENERGY_SYNC_PLUGIN") << "set offset to " << offset << "W";
+        logging::info("X86_ENERGY_PLUGIN") << "set offset to " << offset << "W";
 
         std::string metric_name = "x86_energy/BLADE/E";
         auto& handle = make_handle(metric_name, metric_name, metric_name, std::move(blade_sources),
