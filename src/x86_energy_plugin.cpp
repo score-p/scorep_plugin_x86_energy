@@ -86,14 +86,14 @@ void x86_energy_plugin::add_metric(x86_energy_metric& handle)
 void x86_energy_plugin::start()
 {
 
-    x86_energy_thread = std::thread([this]() { this->x86_energy_m.measurment(); });
+    x86_energy_thread = std::thread([this]() { this->x86_energy_m.measurement(); });
 
     logging::info() << "Successfully started x86_energy measurement.";
 }
 
 void x86_energy_plugin::stop()
 {
-    x86_energy_m.stop_measurment();
+    x86_energy_m.stop_measurement();
     if (x86_energy_thread.joinable())
     {
         x86_energy_thread.join();
@@ -181,7 +181,7 @@ x86_energy_plugin::get_metric_properties(const std::string& name)
 
     if (properties.empty())
     {
-        logging::fatal() << "Did not add any property! There will be no measurments available.";
+        logging::fatal() << "Did not add any property! There will be no measurements available.";
     }
     x86_energy_m.add_handles(get_handles());
 

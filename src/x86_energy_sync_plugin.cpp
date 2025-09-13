@@ -371,7 +371,7 @@ x86_energy_sync_plugin::get_metric_properties(const std::string& name)
 
     if (properties.empty())
     {
-        logging::error() << "Did not add any property! There will be no measurments available.";
+        logging::error() << "Did not add any property! There will be no measurements available.";
     }
     metric_properties_added = true;
     return properties;

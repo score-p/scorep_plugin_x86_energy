@@ -26,8 +26,8 @@ public:
     x86_energy_measurement_thread(std::chrono::microseconds intervall_);
     void add_handles(const std::vector<x86_energy_metric>& handles);
     std::vector<std::pair<scorep::chrono::ticks, double>> get_readings(x86_energy_metric& handle);
-    void measurment();
-    void stop_measurment();
+    void measurement();
+    void stop_measurement();
 
 private:
     /* thread stuff */
@@ -40,7 +40,7 @@ private:
     std::unordered_map<std::reference_wrapper<x86_energy_metric>,
                        std::vector<std::pair<scorep::chrono::ticks, double>>,
                        std::hash<x86_energy_metric>, std::equal_to<x86_energy_metric>>
-        measurments;
+        measurements;
 };
 
 #endif /* INCLUDE_X86_ENERGY_MEASUREMENT_THREAD_CPP_ */
