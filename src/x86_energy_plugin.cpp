@@ -48,7 +48,7 @@
 
 x86_energy_plugin::x86_energy_plugin()
 : x86_energy_m(
-      std::chrono::microseconds(stoi(scorep::environment_variable::get("interval_us", "50000"))))
+      std::chrono::microseconds(stoi(scorep::environment_variable::get("INTERVAL_US", "50000"))))
 {
     logging::debug("X86_ENERGY_PLUGIN") << "Using x86_energy mechanism: " << mechanism.name();
 
