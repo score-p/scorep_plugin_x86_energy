@@ -50,7 +50,7 @@ private:
 
     const std::string prefix_ = "x86_energy/"; /**< TODO reimplement **/
     std::string hostname;
-    bool is_resposible = false;
+    bool is_responsible = false;
     pid_t responsible_thread = -1;
 };
 

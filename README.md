@@ -142,7 +142,7 @@ be recorded when tracing an application. You can add the following metrics:
     because there are included in package.
     The default value of 70W was measured on Taurus
 
-* `SCOREP_X86_ENERGY_PLUGIN_INTERVALL_US` (default `50000`)
+* `SCOREP_METRIC_X86_ENERGY_PLUGIN_INTERVAL_US` (default `50000`)
 
     The time in microsecs, between two consecutive reads of the power/energy values. A longer interval
     means less disturbance, a shorter interval is more exact.

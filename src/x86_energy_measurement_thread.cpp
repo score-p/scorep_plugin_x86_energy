@@ -16,12 +16,12 @@ void x86_energy_measurement_thread::add_handles(const std::vector<x86_energy_met
 {
     for (auto& handle : handles)
     {
-        measurments.insert(std::make_pair(std::ref(const_cast<x86_energy_metric&>(handle)),
+        measurements.insert(std::make_pair(std::ref(const_cast<x86_energy_metric&>(handle)),
                                           std::vector<std::pair<scorep::chrono::ticks, double>>()));
     }
 }
 
-void x86_energy_measurement_thread::measurment()
+void x86_energy_measurement_thread::measurement()
 {
     stop = false;
 
@@ -30,7 +30,7 @@ void x86_energy_measurement_thread::measurment()
         try
         {
             std::lock_guard<std::mutex> lock(m_mutex);
-            for (auto& metric_it : measurments)
+            for (auto& metric_it : measurements)
             {
                 auto value = metric_it.first.get().read();
                 auto tick = scorep::chrono::measurement_clock::now();
@@ -49,10 +49,10 @@ std::vector<std::pair<scorep::chrono::ticks, double>>
 x86_energy_measurement_thread::get_readings(x86_energy_metric& handle)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
-    return measurments[handle];
+    return measurements[handle];
 }
 
-void x86_energy_measurement_thread::stop_measurment()
+void x86_energy_measurement_thread::stop_measurement()
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     stop = true;

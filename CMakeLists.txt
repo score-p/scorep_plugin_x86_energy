@@ -35,19 +35,16 @@ target_compile_features(x86_energy_plugin PUBLIC cxx_std_14)
 target_link_libraries(x86_energy_plugin PUBLIC scorep-plugin-cxx x86_energy::x86_energy_cxx Threads::Threads)
 target_include_directories(x86_energy_plugin PUBLIC include)
 
-find_package(MPI)
 
 include_directories(include)
 
-if (MPI_FOUND AND ENABLE_MPI)
+if (ENABLE_MPI)
+    find_package(MPI REQUIRED)
     add_definitions(-DHAVE_MPI)
     message(STATUS "Build with MPI support")
     target_compile_definitions(x86_energy_sync_plugin PRIVATE MPI_VERSION)
     target_link_libraries(x86_energy_sync_plugin PRIVATE MPI::MPI_C)
     target_link_libraries(x86_energy_sync_plugin PRIVATE MPI::MPI_CXX)
-    
-elseif (ENABLE_MPI)
-    message(FATAL_ERROR "Can't find MPI. Please provide MPI or unset \"ENABLE_MPI\"")
 endif()
 
 install(TARGETS x86_energy_sync_plugin

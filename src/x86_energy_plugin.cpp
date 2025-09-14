@@ -48,9 +48,9 @@
 
 x86_energy_plugin::x86_energy_plugin()
 : x86_energy_m(
-      std::chrono::microseconds(stoi(scorep::environment_variable::get("interval_us", "50000"))))
+      std::chrono::microseconds(stoi(scorep::environment_variable::get("INTERVAL_US", "50000"))))
 {
-    logging::debug("X86_ENERGY_SYNC_PLUGIN") << "Using x86_energy mechanism: " << mechanism.name();
+    logging::debug("X86_ENERGY_PLUGIN") << "Using x86_energy mechanism: " << mechanism.name();
 
     auto sources = mechanism.available_sources();
 
@@ -64,7 +64,7 @@ x86_energy_plugin::x86_energy_plugin()
         }
         catch (std::exception& e)
         {
-            logging::info("X86_ENERGY_SYNC_PLUGIN")
+            logging::info("X86_ENERGY_PLUGIN")
                 << "Failed to initialize access source: " << source.name()
                 << " error was: " << e.what();
         }
@@ -86,14 +86,14 @@ void x86_energy_plugin::add_metric(x86_energy_metric& handle)
 void x86_energy_plugin::start()
 {
 
-    x86_energy_thread = std::thread([this]() { this->x86_energy_m.measurment(); });
+    x86_energy_thread = std::thread([this]() { this->x86_energy_m.measurement(); });
 
     logging::info() << "Successfully started x86_energy measurement.";
 }
 
 void x86_energy_plugin::stop()
 {
-    x86_energy_m.stop_measurment();
+    x86_energy_m.stop_measurement();
     if (x86_energy_thread.joinable())
     {
         x86_energy_thread.join();
@@ -167,7 +167,7 @@ x86_energy_plugin::get_metric_properties(const std::string& name)
     if (!blade_sources.empty())
     {
         double offset = stod(scorep::environment_variable::get("OFFSET", "70.0"));
-        logging::info("X86_ENERGY_SYNC_PLUGIN") << "set offset to " << offset << "W";
+        logging::info("X86_ENERGY_PLUGIN") << "set offset to " << offset << "W";
 
         std::string metric_name = "x86_energy/BLADE/E";
         auto& handle = make_handle(metric_name, metric_name, metric_name, std::move(blade_sources),
@@ -181,7 +181,7 @@ x86_energy_plugin::get_metric_properties(const std::string& name)
 
     if (properties.empty())
     {
-        logging::fatal() << "Did not add any property! There will be no measurments available.";
+        logging::fatal() << "Did not add any property! There will be no measurements available.";
     }
     x86_energy_m.add_handles(get_handles());
 

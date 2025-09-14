@@ -45,7 +45,7 @@
 
 using scorep::plugin::logging;
 
-bool global_is_resposible_process = false;
+bool global_is_responsible_process = false;
 pid_t global_responsible_thread = -1;
 
 x86_energy_sync_plugin::x86_energy_sync_plugin()
@@ -56,7 +56,7 @@ x86_energy_sync_plugin::x86_energy_sync_plugin()
      * synchronise funciton is not called, for example if PTF is used
      */
     this->responsible_thread = global_responsible_thread;
-    this->is_resposible = global_is_resposible_process;
+    this->is_responsible = global_is_responsible_process;
 
     char c_hostname[HOST_NAME_MAX + 1];
     if (gethostname(c_hostname, HOST_NAME_MAX + 1))
@@ -147,7 +147,7 @@ void x86_energy_sync_plugin::get_current_value(x86_energy_metric& m, P& proxy)
 {
     // retrun 0 if not responsible. Simulate PER_HOST.
     pid_t ptid = syscall(SYS_gettid);
-    if (!this->is_resposible || (this->responsible_thread != ptid))
+    if (!this->is_responsible || (this->responsible_thread != ptid))
     {
         proxy.store((int64_t)0);
         return;
@@ -193,7 +193,7 @@ void x86_energy_sync_plugin::synchronize(bool is_responsible,
         {
             logging::debug() << "SCOREP_METRIC_SYNCHRONIZATION_MODE_BEGIN";
 
-            this->is_resposible = true;
+            this->is_responsible = true;
             this->responsible_thread = syscall(SYS_gettid);
             logging::debug() << "got responsible ptid:" << this->responsible_thread;
 
@@ -222,12 +222,12 @@ void x86_energy_sync_plugin::synchronize(bool is_responsible,
 
             if (new_myrank == 0)
             {
-                this->is_resposible = true;
+                this->is_responsible = true;
                 logging::debug() << "got responsible process for host: " << this->hostname;
             }
             else
             {
-                this->is_resposible = false;
+                this->is_responsible = false;
             }
 
             this->responsible_thread = syscall(SYS_gettid);
@@ -238,7 +238,7 @@ void x86_energy_sync_plugin::synchronize(bool is_responsible,
             logging::warn() << "You are using the non MPI version of this "
                                "plugin. This might lead to trouble if there is more "
                                "than one MPI rank per node.";
-            this->is_resposible = true;
+            this->is_responsible = true;
             this->responsible_thread = syscall(SYS_gettid);
             logging::debug() << "got responsible ptid:" << this->responsible_thread;
 #endif
@@ -255,7 +255,7 @@ void x86_energy_sync_plugin::synchronize(bool is_responsible,
         }
     }
 
-    global_is_resposible_process = this->is_resposible;
+    global_is_responsible_process = this->is_responsible;
     global_responsible_thread = this->responsible_thread;
     logging::debug() << "setting global responsible ptid to:" << this->responsible_thread;
 }
@@ -371,7 +371,7 @@ x86_energy_sync_plugin::get_metric_properties(const std::string& name)
 
     if (properties.empty())
     {
-        logging::error() << "Did not add any property! There will be no measurments available.";
+        logging::error() << "Did not add any property! There will be no measurements available.";
     }
     metric_properties_added = true;
     return properties;
