@@ -52,7 +52,7 @@ x86_energy_plugin::x86_energy_plugin()
 : x86_energy_m(
       std::chrono::microseconds(stoi(scorep::environment_variable::get("INTERVAL_US", "50000"))))
 {
-    logging::debug("X86_ENERGY_PLUGIN") << "Using x86_energy mechanism: " << mechanism.name();
+    logging::debug() << "Using x86_energy mechanism: " << mechanism.name();
 
     auto sources = mechanism.available_sources();
 
@@ -66,7 +66,7 @@ x86_energy_plugin::x86_energy_plugin()
         }
         catch (std::exception& e)
         {
-            logging::info("X86_ENERGY_PLUGIN")
+            logging::info()
                 << "Failed to initialize access source: " << source.name()
                 << " error was: " << e.what();
         }
