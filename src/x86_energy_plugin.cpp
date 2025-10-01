@@ -48,9 +48,9 @@
 
 #include <scorep/plugin/util/matcher.hpp>
 
-x86_energy_plugin::x86_energy_plugin()
+x86_energy_plugin::x86_energy_plugin(std::map<std::string, std::string> configVars)
 : x86_energy_m(
-      std::chrono::microseconds(stoi(scorep::environment_variable::get("INTERVAL_US", "50000"))))
+      std::chrono::microseconds(stoi(configVars.at("interval_us"))))
 {
     logging::debug() << "Using x86_energy mechanism: " << mechanism.name();
 
@@ -262,6 +262,11 @@ void x86_energy_plugin::get_all_values(std::int32_t id, C& cursor)
 
     logging::debug() << "get_all_values wrote " << values.size() << " values (out of which "
                      << cursor.size() << " are in the valid time range)";
+}
+
+std::map<std::string, std::string> x86_energy_plugin::declare_config_vars()
+{
+    return { { "interval_us", "50000" } };
 }
 
 SCOREP_METRIC_PLUGIN_CLASS(x86_energy_plugin, "x86_energy")

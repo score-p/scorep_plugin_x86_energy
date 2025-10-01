@@ -17,10 +17,10 @@ using namespace scorep::plugin::policy;
 using scorep::plugin::logging;
 
 class x86_energy_plugin
-    : public scorep::plugin::base<x86_energy_plugin, async, per_topology, post_mortem, scorep_clock>
+    : public scorep::plugin::base<x86_energy_plugin, config_vars, async, per_topology, post_mortem, scorep_clock>
 {
 public:
-    x86_energy_plugin();
+    x86_energy_plugin(std::map<std::string, std::string>);
     ~x86_energy_plugin();
 
     std::vector<scorep::plugin::measurement_point> add_topology_metrics(const SCOREP_MetricTopologyNode*, const std::string&);
@@ -33,6 +33,8 @@ public:
     void get_all_values(int32_t id, C& cursor);
 
     std::vector<scorep::plugin::metric_property> get_metric_properties(const std::string& name);
+
+    static std::map<std::string, std::string> declare_config_vars();
 
 private:
     scorep::plugin::metric_property add_metric_property(const std::string& name, int sensor,
