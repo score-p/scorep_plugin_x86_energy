@@ -46,11 +46,13 @@
 
 #include <x86_energy_plugin.hpp>
 
-x86_energy_plugin::x86_energy_plugin()
+#include <scorep/plugin/util/matcher.hpp>
+
+x86_energy_plugin::x86_energy_plugin(std::map<std::string, std::string> configVars)
 : x86_energy_m(
-      std::chrono::microseconds(stoi(scorep::environment_variable::get("INTERVAL_US", "50000"))))
+      std::chrono::microseconds(stoi(configVars.at("interval_us"))))
 {
-    logging::debug("X86_ENERGY_PLUGIN") << "Using x86_energy mechanism: " << mechanism.name();
+    logging::debug() << "Using x86_energy mechanism: " << mechanism.name();
 
     auto sources = mechanism.available_sources();
 
@@ -64,7 +66,7 @@ x86_energy_plugin::x86_energy_plugin()
         }
         catch (std::exception& e)
         {
-            logging::info("X86_ENERGY_PLUGIN")
+            logging::info()
                 << "Failed to initialize access source: " << source.name()
                 << " error was: " << e.what();
         }
@@ -78,21 +80,28 @@ x86_energy_plugin::x86_energy_plugin()
     }
 }
 
-void x86_energy_plugin::add_metric(x86_energy_metric& handle)
+/**
+ * Destructor
+ *
+ * Stopping x86_energy
+ */
+x86_energy_plugin::~x86_energy_plugin()
 {
-    // We actually don't need to do a thing! :-)
+    logging::debug() << "plugin sucessfull finalized";
 }
 
 void x86_energy_plugin::start()
 {
+    logging::info() << "Starting x86_energy measurement.";
 
+    x86_energy_m.add_handles(handles);
     x86_energy_thread = std::thread([this]() { this->x86_energy_m.measurement(); });
-
-    logging::info() << "Successfully started x86_energy measurement.";
 }
 
 void x86_energy_plugin::stop()
 {
+    logging::info() << "Stopping x86_energy measurement.";
+
     x86_energy_m.stop_measurement();
     if (x86_energy_thread.joinable())
     {
@@ -102,10 +111,11 @@ void x86_energy_plugin::stop()
 
 void x86_energy_plugin::synchronize(bool is_responsible, SCOREP_MetricSynchronizationMode sync_mode)
 {
+    logging::info() << "Synching x86_energy measurement.";
 }
 
 std::vector<scorep::plugin::metric_property>
-x86_energy_plugin::get_metric_properties(const std::string& name)
+x86_energy_plugin::get_metric_properties(const std::string& namePattern)
 {
     std::vector<scorep::plugin::metric_property> properties;
     std::vector<x86_energy::SourceCounter> blade_sources;
@@ -122,77 +132,129 @@ x86_energy_plugin::get_metric_properties(const std::string& name)
             continue;
         }
 
-        for (auto index = 0; index < architecture.size(granularity); index++)
+        std::stringstream str;
+        str << mechanism.name() << " " << counter;
+        auto metric_name = str.str();
+        if ( !scorep::plugin::util::matcher(namePattern)(metric_name))
         {
-            std::stringstream str;
-            str << mechanism.name() << " " << counter << "[" << index << "]";
-
-            std::string metric_name = str.str();
-
-            std::vector<x86_energy::SourceCounter> tmp_vec;
-            for (auto& active_source : active_sources)
-            {
-                logging::debug() << "try source: " << active_source->name()
-                                 << " for granularity: " << index;
-                try
-                {
-                    tmp_vec.emplace_back(active_source->get(counter, index));
-                    auto& handle = make_handle(metric_name, metric_name, metric_name,
-                                               std::move(tmp_vec), std::string("E"), false, 0);
-
-                    auto metric =
-                        scorep::plugin::metric_property(metric_name, " Energy Consumption", "J")
-                            .accumulated_last()
-                            .value_double()
-                            .decimal();
-
-                    properties.push_back(metric);
-
-                    if (counter == x86_energy::Counter::PCKG ||
-                        counter == x86_energy::Counter::DRAM)
-                    {
-                        blade_sources.emplace_back(active_source->get(counter, index));
-                    }
-                    break;
-                }
-                catch (std::runtime_error& e)
-                {
-                    logging::debug() << "Could not access source: " << active_source->name()
-                                     << " for granularity: " << index << " Reason : " << e.what();
-                }
-            }
+            continue;
         }
-    }
 
-    if (!blade_sources.empty())
-    {
-        double offset = stod(scorep::environment_variable::get("OFFSET", "70.0"));
-        logging::info("X86_ENERGY_PLUGIN") << "set offset to " << offset << "W";
+        auto metric =
+            scorep::plugin::metric_property(metric_name, " Energy Consumption", "J")
+                .accumulated_last()
+                .value_double()
+                .decimal();
 
-        std::string metric_name = "x86_energy/BLADE/E";
-        auto& handle = make_handle(metric_name, metric_name, metric_name, std::move(blade_sources),
-                                   std::string("E"), true, offset);
-        auto metric = scorep::plugin::metric_property(metric_name, " Energy Consumption", "J")
-                          .accumulated_last()
-                          .value_double()
-                          .decimal();
         properties.push_back(metric);
     }
-
-    if (properties.empty())
-    {
-        logging::fatal() << "Did not add any property! There will be no measurements available.";
-    }
-    x86_energy_m.add_handles(get_handles());
 
     return properties;
 }
 
+
+std::vector<scorep::plugin::measurement_point>
+x86_energy_plugin::add_topology_metrics(const SCOREP_MetricTopologyNode* topologyRoot,
+                                        const std::string& metricName)
+{
+    auto granularity_to_domain = [](const auto granularity)
+    {
+        switch (granularity)
+        {
+        case x86_energy::Granularity::SYSTEM:
+            return SCOREP_METRIC_TOPOLOGY_NODE_DOMAIN_SHARED_MEMORY;
+        case x86_energy::Granularity::SOCKET:
+            return SCOREP_METRIC_TOPOLOGY_NODE_DOMAIN_SOCKET;
+        case x86_energy::Granularity::CORE:
+            return SCOREP_METRIC_TOPOLOGY_NODE_DOMAIN_CORE;
+        case x86_energy::Granularity::THREAD:
+            return SCOREP_METRIC_TOPOLOGY_NODE_DOMAIN_PU;
+        }
+        return SCOREP_METRIC_TOPOLOGY_NODE_DOMAIN_NONE;
+    };
+
+    /* Find counter based on metric name */
+    const auto counter = [this](const auto name){
+        for (int i = 0; i < static_cast<int>(x86_energy::Counter::SIZE); i++)
+        {
+            auto counter = static_cast<x86_energy::Counter>(i);
+
+            std::stringstream str;
+            str << mechanism.name() << " " << counter;
+
+            /* The metric name must match the mechanism+counter! */
+            if (str.str() == name)
+            {
+                return counter;
+            }
+        }
+        return x86_energy::Counter::SIZE;
+    }(metricName);
+
+    auto granularity = mechanism.granularity(counter);
+    if (granularity == x86_energy::Granularity::SIZE)
+    {
+        return {};
+    }
+
+    logging::debug() << "Finding responsible topology nodes for counter " << counter << " / " << granularity << " count " << architecture.size(granularity);
+
+    /* collect all nodes for this granularity/domain */
+    std::vector<const SCOREP_MetricTopologyNode*> nodes;
+    SCOREP_MetricTopology_ForAllResponsiblePerDomain(
+        topologyRoot, granularity_to_domain(granularity),
+        [](const SCOREP_MetricTopologyNode* node,
+           void* cbArg)
+    {
+        auto* nodes = static_cast<std::vector<const SCOREP_MetricTopologyNode*>*>(cbArg);
+        nodes->emplace_back(node);
+    }, (void*)&nodes);
+
+    std::vector<scorep::plugin::measurement_point> results;
+    for (const auto* node : nodes)
+    {
+        if (node->id >= architecture.size(granularity))
+        {
+            continue;
+        }
+
+        std::stringstream str;
+        str << metricName << "[" << node->id << "]";
+        auto unique_metric_name = str.str();
+
+        /* Use first active source which can handle this metric */
+        for (auto& active_source : active_sources)
+        {
+            try
+            {
+                logging::debug() << "try source: " << active_source->name()
+                                 << " for granularity: " << node->id;
+
+                std::vector<x86_energy::SourceCounter> tmp_vec;
+                tmp_vec.emplace_back(active_source->get(counter, node->id));
+                const auto metric_id = static_cast<int32_t>(handles.size());
+                handles.emplace_back(unique_metric_name, unique_metric_name,
+                                     std::move(tmp_vec), std::string("E"), false, 0);
+
+                results.emplace_back(metric_id, node);
+                break;
+            }
+            catch (std::runtime_error& e)
+            {
+                logging::debug() << "Could not access source: " << active_source->name()
+                                 << " for granularity: " << node->id << " Reason : " << e.what();
+            }
+        }
+    }
+
+    return results;
+}
+
 template <typename C>
-void x86_energy_plugin::get_all_values(x86_energy_metric& handle, C& cursor)
+void x86_energy_plugin::get_all_values(std::int32_t id, C& cursor)
 {
 
-    auto values = x86_energy_m.get_readings(handle);
+    auto values = x86_energy_m.get_readings(handles[id]);
     for (auto& value : values)
     {
         cursor.write(value);
@@ -200,6 +262,11 @@ void x86_energy_plugin::get_all_values(x86_energy_metric& handle, C& cursor)
 
     logging::debug() << "get_all_values wrote " << values.size() << " values (out of which "
                      << cursor.size() << " are in the valid time range)";
+}
+
+std::map<std::string, std::string> x86_energy_plugin::declare_config_vars()
+{
+    return { { "interval_us", "50000" } };
 }
 
 SCOREP_METRIC_PLUGIN_CLASS(x86_energy_plugin, "x86_energy")
